@@ -294,3 +294,11 @@ inline int LNKO(int a, int b)
     }
     return a;
 }
+
+inline void ShowDebug(const TCHAR * pcszFormat, ... )
+{
+	CString strMsg;
+	strMsg.FormatMessage(pcszFormat);
+	strMsg.Insert(0, _T("MPC-HC: "));
+	::OutputDebugString(strMsg);
+}

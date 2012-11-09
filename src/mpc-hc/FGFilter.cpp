@@ -474,6 +474,15 @@ HRESULT CFGFilterVideoRenderer::Create(IBaseFilter** ppBF, CInterfaceList<IUnkno
 
             *ppBF = pBF.Detach();
         }
+		else
+		{
+			LPOLESTR pStr = NULL;
+			if (S_OK == StringFromCLSID(m_clsid, &pStr) && pStr)
+			{
+				ShowDebug(_T("CreateFilter failed, %s"), (LPTSTR)pStr);
+				CoTaskMemFree(pStr);
+			}
+		}
     }
 
     if (!*ppBF) {

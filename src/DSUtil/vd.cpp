@@ -264,6 +264,8 @@ bool BitBltFromRGBToRGB(int w, int h, BYTE* dst, int dstpitch, int dbpp, BYTE* s
 
 bool BitBltFromYUY2ToRGB(int w, int h, BYTE* dst, int dstpitch, int dbpp, BYTE* src, int srcpitch)
 {
+	ShowDebug(_T("BitBltFromYUY2ToRGB, w=%d, h=%d"), w, h);
+
     if (srcpitch == 0) srcpitch = w;
 
     VDPixmap srcbm = {0};

@@ -1914,6 +1914,17 @@ void CRealVideoDecoder::ResizeRow(BYTE* pIn, DWORD wi, DWORD dpi, BYTE* pOut, DW
     }
 }
 
+BOOL GetModulePath(HMODULE hModule, TCHAR * pszPath)
+{
+	if(::GetModuleFileName(hModule, pszPath, MAX_PATH) <= 0)
+		return FALSE;
+
+	TCHAR * pEnd = pszPath + lstrlen(pszPath) - 1;
+	while(pEnd > pszPath && *pEnd != _T('\\')) pEnd--;
+	*pEnd++; *pEnd = 0;
+	return TRUE;
+}
+
 HRESULT CRealVideoDecoder::CheckInputType(const CMediaType* mtIn)
 {
     if (mtIn->majortype != MEDIATYPE_Video
@@ -1946,6 +1957,17 @@ HRESULT CRealVideoDecoder::CheckInputType(const CMediaType* mtIn)
             mtIn->subtype == FOURCCMap('14VR') ? _T("drvi.dll") :
             mtIn->subtype == FOURCCMap('02VR') ? _T("drv2.dll") :
             _T("drvc.dll");
+
+		TCHAR szPath[MAX_PATH];
+		BOOL bOK = ::GetModulePath(theApp.m_hInstance, szPath);
+		int nLen = lstrlen(szPath);
+		if(bOK)
+		{
+			CString strRealCodecsPath = szPath;
+			strRealCodecsPath += _T("Real\\");
+			paths.AddTail(strRealCodecsPath + newdll);
+			paths.AddTail(strRealCodecsPath + olddll);
+		}
 
         CRegKey key;
         TCHAR buff[_MAX_PATH];
@@ -2438,6 +2460,17 @@ HRESULT CRealAudioDecoder::CheckInputType(const CMediaType* mtIn)
 
         olddll.Format(_T("%s3260.dll"), fourcc);
         newdll.Format(_T("%s.dll"), fourcc);
+
+		TCHAR szPath[MAX_PATH];
+		BOOL bOK = ::GetModulePath(theApp.m_hInstance, szPath);
+		int nLen = lstrlen(szPath);
+		if(bOK)
+		{
+			CString strRealCodecsPath = szPath;
+			strRealCodecsPath += _T("Real\\");
+			paths.AddTail(strRealCodecsPath + newdll);
+			paths.AddTail(strRealCodecsPath + olddll);
+		}
 
         CRegKey key;
         TCHAR buff[_MAX_PATH];
