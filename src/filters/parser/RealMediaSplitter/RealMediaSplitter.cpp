@@ -180,6 +180,8 @@ CFilterApp theApp;
 
 #endif
 
+BOOL GetRealCodecsPath(CString& strRealPath);
+
 //
 // CRealMediaSplitterFilter
 //
@@ -1958,13 +1960,9 @@ HRESULT CRealVideoDecoder::CheckInputType(const CMediaType* mtIn)
             mtIn->subtype == FOURCCMap('02VR') ? _T("drv2.dll") :
             _T("drvc.dll");
 
-		TCHAR szPath[MAX_PATH];
-		BOOL bOK = ::GetModulePath(theApp.m_hInstance, szPath);
-		int nLen = lstrlen(szPath);
-		if(bOK)
+		CString strRealCodecsPath;
+		if (GetRealCodecsPath(strRealCodecsPath))
 		{
-			CString strRealCodecsPath = szPath;
-			strRealCodecsPath += _T("Real\\");
 			paths.AddTail(strRealCodecsPath + newdll);
 			paths.AddTail(strRealCodecsPath + olddll);
 		}
@@ -2461,13 +2459,9 @@ HRESULT CRealAudioDecoder::CheckInputType(const CMediaType* mtIn)
         olddll.Format(_T("%s3260.dll"), fourcc);
         newdll.Format(_T("%s.dll"), fourcc);
 
-		TCHAR szPath[MAX_PATH];
-		BOOL bOK = ::GetModulePath(theApp.m_hInstance, szPath);
-		int nLen = lstrlen(szPath);
-		if(bOK)
+		CString strRealCodecsPath;
+		if (GetRealCodecsPath(strRealCodecsPath))
 		{
-			CString strRealCodecsPath = szPath;
-			strRealCodecsPath += _T("Real\\");
 			paths.AddTail(strRealCodecsPath + newdll);
 			paths.AddTail(strRealCodecsPath + olddll);
 		}
@@ -2703,4 +2697,27 @@ HRESULT CRealAudioDecoder::NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tSto
     m_bufflen = 0;
     m_rtBuffStart = 0;
     return __super::NewSegment(tStart, tStop, dRate);
+}
+
+BOOL GetRealCodecsPath(CString& strRealPath)
+{
+	BOOL bResult = FALSE;
+	HMODULE hModule = NULL;
+#ifdef STANDALONE_FILTER
+	hModule = theApp.m_hInstance;
+#else
+	hModule = ::GetModuleHandle(NULL);
+#endif
+	BOOL bOK = ::GetModulePath(hModule, strRealPath.GetBufferSetLength(MAX_PATH));
+	strRealPath.ReleaseBuffer();
+	if(bOK)
+	{
+#ifdef STANDALONE_FILTER
+		strRealPath += _T("Real\\");
+#else
+		strRealPath += _T("Codecs\\Real\\");
+#endif
+		bResult = TRUE;
+	}
+	return bResult;
 }
