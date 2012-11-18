@@ -40,6 +40,8 @@ LPCTSTR CFileAssoc::strOldAssocKey        = _T("PreviousRegistration");
 LPCTSTR CFileAssoc::strRegisteredAppKey   = _T("Software\\Clients\\Media\\Media Player Classic\\Capabilities");
 LPCTSTR CFileAssoc::strRegAppFileAssocKey = _T("Software\\Clients\\Media\\Media Player Classic\\Capabilities\\FileAssociations");
 
+bool CFileAssoc::m_bNoRecentDocs = false;
+
 const CString CFileAssoc::strOpenCommand    = CFileAssoc::GetOpenCommand();
 const CString CFileAssoc::strEnqueueCommand = CFileAssoc::GetEnqueueCommand();
 
@@ -124,6 +126,32 @@ bool CFileAssoc::SaveIconLibVersion()
     return saved;
 }
 
+void CFileAssoc::SetNoRecentDocs(bool bNoRecentDocs, bool bUpdateAssocs /*= false*/)
+{
+    if (bNoRecentDocs == m_bNoRecentDocs) {
+        bUpdateAssocs = false;
+    } else {
+        m_bNoRecentDocs = bNoRecentDocs;
+    }
+
+    CAtlList<CString> exts;
+    if (bUpdateAssocs && GetAssociatedExtensionsFromRegistry(exts)) {
+        CRegKey key;
+        POSITION pos = exts.GetHeadPosition();
+        while (pos) {
+            const CString& ext = exts.GetNext(pos);
+
+            if (ERROR_SUCCESS == key.Open(HKEY_CLASSES_ROOT, PROGID + ext)) {
+                if (m_bNoRecentDocs) {
+                    key.SetStringValue(_T("NoRecentDocs"), _T(""));
+                } else {
+                    key.DeleteValue(_T("NoRecentDocs"));
+                }
+            }
+        }
+    }
+}
+
 bool CFileAssoc::RegisterApp()
 {
     bool success = false;
@@ -175,10 +203,19 @@ bool CFileAssoc::Register(CString ext, CString strLabel, bool bRegister, bool bR
             return false;
         }
 
+        if (m_bNoRecentDocs) {
+            key.SetStringValue(_T("NoRecentDocs"), _T(""));
+        } else {
+            key.DeleteValue(_T("NoRecentDocs"));
+        }
+
+        CString appIcon = "\"" + GetProgramPath(true) + "\",0";
+
         // Add to playlist option
         if (bRegisterContextMenuEntries) {
             if (ERROR_SUCCESS != key.Create(HKEY_CLASSES_ROOT, strProgID + _T("\\shell\\enqueue"))
                     || ERROR_SUCCESS != key.SetStringValue(NULL, ResStr(IDS_ADD_TO_PLAYLIST))
+                    || ERROR_SUCCESS != key.SetStringValue(_T("Icon"), appIcon)
                     || ERROR_SUCCESS != key.Create(HKEY_CLASSES_ROOT, strProgID + _T("\\shell\\enqueue\\command"))
                     || ERROR_SUCCESS != key.SetStringValue(NULL, strEnqueueCommand)) {
                 return false;
@@ -194,11 +231,13 @@ bool CFileAssoc::Register(CString ext, CString strLabel, bool bRegister, bool bR
             return false;
         }
         if (bRegisterContextMenuEntries) {
-            if (ERROR_SUCCESS != key.SetStringValue(NULL, ResStr(IDS_OPEN_WITH_MPC))) {
+            if (ERROR_SUCCESS != key.SetStringValue(NULL, ResStr(IDS_OPEN_WITH_MPC))
+                    || ERROR_SUCCESS != key.SetStringValue(_T("Icon"), appIcon)) {
                 return false;
             }
         } else {
-            if (ERROR_SUCCESS != key.SetStringValue(NULL, _T(""))) {
+            if (ERROR_SUCCESS != key.SetStringValue(NULL, _T(""))
+                    || ERROR_SUCCESS != key.SetStringValue(_T("Icon"), _T(""))) {
                 return false;
             }
         }
@@ -214,8 +253,6 @@ bool CFileAssoc::Register(CString ext, CString strLabel, bool bRegister, bool bR
         }
 
         if (bAssociatedWithIcon) {
-            CString appIcon;
-
             if (m_hIconLib) {
                 int iconIndex = GetIconIndex(ext);
 
@@ -225,16 +262,12 @@ bool CFileAssoc::Register(CString ext, CString strLabel, bool bRegister, bool bR
                 }
             }
 
-            /* no icon was found for the file extension, so use MPC's icon */
-            if (appIcon.IsEmpty()) {
-                appIcon = "\"" + GetProgramPath(true) + "\",0";
-            }
-
             if (ERROR_SUCCESS != key.Create(HKEY_CLASSES_ROOT, strProgID + _T("\\DefaultIcon"))
                     || ERROR_SUCCESS != key.SetStringValue(NULL, appIcon)) {
                 return false;
             }
         } else {
+            key.Close();
             key.Attach(HKEY_CLASSES_ROOT);
             key.RecurseDeleteKey(strProgID + _T("\\DefaultIcon"));
         }
@@ -273,6 +306,7 @@ bool CFileAssoc::SetFileAssociation(CString strExt, CString strProgID, bool bReg
             // Save the application currently associated
             if (SUCCEEDED(m_pAAR->QueryCurrentDefault(strExt, AT_FILEEXTENSION, AL_EFFECTIVE, &pszCurrentAssociation))) {
                 if (ERROR_SUCCESS != key.Create(HKEY_CLASSES_ROOT, strProgID)) {
+                    CoTaskMemFree(pszCurrentAssociation);
                     return false;
                 }
 
@@ -509,8 +543,11 @@ bool CFileAssoc::RegisterFolderContextMenuEntries(bool bRegister)
     if (bRegister) {
         success = false;
 
+        CString appIcon = "\"" + GetProgramPath(true) + "\",0";
+
         if (ERROR_SUCCESS == key.Create(HKEY_CLASSES_ROOT, _T("Directory\\shell\\") PROGID _T(".enqueue"))) {
             key.SetStringValue(NULL, ResStr(IDS_ADD_TO_PLAYLIST));
+            key.SetStringValue(_T("Icon"), appIcon);
 
             if (ERROR_SUCCESS == key.Create(HKEY_CLASSES_ROOT, _T("Directory\\shell\\") PROGID _T(".enqueue\\command"))) {
                 key.SetStringValue(NULL, strEnqueueCommand);
@@ -522,6 +559,7 @@ bool CFileAssoc::RegisterFolderContextMenuEntries(bool bRegister)
             success = false;
 
             key.SetStringValue(NULL, ResStr(IDS_OPEN_WITH_MPC));
+            key.SetStringValue(_T("Icon"), appIcon);
 
             if (ERROR_SUCCESS == key.Create(HKEY_CLASSES_ROOT, _T("Directory\\shell\\") PROGID _T(".play\\command"))) {
                 key.SetStringValue(NULL, strOpenCommand);

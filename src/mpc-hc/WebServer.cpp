@@ -163,6 +163,7 @@ void CWebServer::Init()
 
 DWORD WINAPI CWebServer::StaticThreadProc(LPVOID lpParam)
 {
+    SetThreadName(DWORD(-1), "WebServer Thread");
     return ((CWebServer*)lpParam)->ThreadProc();
 }
 
@@ -291,7 +292,7 @@ bool CWebServer::LoadPage(UINT resid, CStringA& str, CString path)
 
 void CWebServer::OnAccept(CWebServerSocket* pServer)
 {
-    CAutoPtr<CWebClientSocket> p(DNew CWebClientSocket(this, m_pMainFrame));
+    CAutoPtr<CWebClientSocket> p(DEBUG_NEW CWebClientSocket(this, m_pMainFrame));
     if (pServer->Accept(*p)) {
         CString name;
         UINT port;
@@ -436,22 +437,22 @@ void CWebServer::OnRequest(CWebClientSocket* pClient, CStringA& hdr, CStringA& b
                     pos = pClient->m_get.GetStartPosition();
                     while (pos) {
                         pClient->m_get.GetNextAssoc(pos, key, value);
-                        debug += "GET[" + key + "] = " + UTF16To8(value) + "\r\n";
+                        debug += "GET[" + HtmlSpecialChars(key) + "] = " + HtmlSpecialChars(UTF8(value)) + "\r\n";
                     }
                     pos = pClient->m_post.GetStartPosition();
                     while (pos) {
                         pClient->m_post.GetNextAssoc(pos, key, value);
-                        debug += "POST[" + key + "] = " + UTF16To8(value) + "\r\n";
+                        debug += "POST[" + HtmlSpecialChars(key) + "] = " + HtmlSpecialChars(UTF8(value)) + "\r\n";
                     }
                     pos = pClient->m_cookie.GetStartPosition();
                     while (pos) {
                         pClient->m_cookie.GetNextAssoc(pos, key, value);
-                        debug += "COOKIE[" + key + "] = " + UTF16To8(value) + "\r\n";
+                        debug += "COOKIE[" + HtmlSpecialChars(key) + "] = " + HtmlSpecialChars(UTF8(value)) + "\r\n";
                     }
                     pos = pClient->m_request.GetStartPosition();
                     while (pos) {
                         pClient->m_request.GetNextAssoc(pos, key, value);
-                        debug += "REQUEST[" + key + "] = " + UTF16To8(value) + "\r\n";
+                        debug += "REQUEST[" + HtmlSpecialChars(key) + "] = " + HtmlSpecialChars(UTF8(value)) + "\r\n";
                     }
                 }
                 debug += "</div>";
@@ -496,7 +497,7 @@ void CWebServer::OnRequest(CWebClientSocket* pClient, CStringA& hdr, CStringA& b
             }
 
             int gzippedBuffLen = body.GetLength();
-            BYTE* gzippedBuff = new BYTE[gzippedBuffLen];
+            BYTE* gzippedBuff = DEBUG_NEW BYTE[gzippedBuffLen];
 
             // Compress
             strm.avail_in = body.GetLength();
@@ -650,7 +651,7 @@ bool CWebServer::CallCGI(CWebClientSocket* pClient, CStringA& hdr, CStringA& bod
         FreeEnvironmentStrings((LPTSTR)lpvEnv);
     }
 
-    TCHAR* cmdln = DNew TCHAR[32768];
+    TCHAR* cmdln = DEBUG_NEW TCHAR[32768];
     _sntprintf_s(cmdln, 32768, 32768, _T("\"%s\" \"%s\""), cgi, path);
 
     if (hChildStdinRd && hChildStdoutWr)

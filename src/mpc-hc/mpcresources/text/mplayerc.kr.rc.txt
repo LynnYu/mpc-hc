@@ -404,17 +404,18 @@ BEGIN DIALOGEX IDD_PPAGESYNC LINES 25
 24		"현재 파일을 닫고 다시 시작해야만 설정이 적용됩니다."
 END
 
-BEGIN DIALOGEX IDD_PPAGETWEAKS LINES 25
+BEGIN DIALOGEX IDD_PPAGETWEAKS LINES 26
 5		"이동 간격 (최소/중간/최대 간격을 밀리초 단위로 입력)"
 9		"기본값"
 10		"빠른 탐색 (키프레임)"
-11		"MSN 메신저에 ""지금 재생중"" 정보 표시하기"
-13		"전체화면시 최소화 예방 (기본 모니터가 없을시)"
-15		"Windows 7 작업표시줄기능 사용(작업표시줄에서 컨트롤가능)"
-16		"Open next/previous file in folder on ""Skip back/forward"" when there is only one item in playlist"
-18		"시간 툴팁 사용:"
-20		"OSD 글꼴:"
-23		"Enable Logitech LCD support (experimental)"
+11		"Show chapter marks in seek bar"
+12		"MSN 메신저에 ""지금 재생중"" 정보 표시하기"
+14		"전체화면시 최소화 예방 (기본 모니터가 없을시)"
+16		"Windows 7 작업표시줄기능 사용(작업표시줄에서 컨트롤가능)"
+17		"Open next/previous file in folder on ""Skip back/forward"" when there is only one item in playlist"
+19		"시간 툴팁 사용:"
+21		"OSD 글꼴:"
+24		"Enable Logitech LCD support (experimental)"
 END
 
 BEGIN DIALOGEX IDD_PPAGEWEBSERVER LINES 21
@@ -1859,6 +1860,11 @@ STRING IDS_VDF_IDCT_LIBMPEG2		"libmpeg2 MMX"
 STRING IDS_VDF_IDCT_SIMPLE		"Simple"
 STRING IDS_VDF_IDCT_SIMPLE_MMX		"Simple MMX"
 STRING IDS_VDF_IDCT_XVID		"Xvid MMX"
+STRING IDS_VDF_IF_AUTO		"Auto"
+STRING IDS_VDF_IF_BOTTOM_FIELD_FIRST		"Bottom field first"
+STRING IDS_VDF_IF_PROGRESSIVE		"Progressive"
+STRING IDS_VDF_IF_TOP_FIELD_FIRST		"Top field first"
+STRING IDS_VDF_INTERLACED_FLAG		"Force the interlaced flag"
 STRING IDS_VDF_SKIPDEBLOCK		"H264 블록제거 모드"
 STRING IDS_VDF_THREADNUMBER		"디코딩 쓰레드갯수(코어갯수)"
 STRING IDS_VDF_VIDEOCARD		"비디오 카드"

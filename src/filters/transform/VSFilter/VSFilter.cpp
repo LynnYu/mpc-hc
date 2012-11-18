@@ -82,6 +82,8 @@ CVSFilterApp theApp;
 //////////////////////////////////////////////////////////////////////////
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
+    // Accepting all media types is needed so that VSFilter can hook
+    // on the graph soon enough before the renderer is connected
     {&MEDIATYPE_NULL, &MEDIASUBTYPE_NULL},
     {&MEDIATYPE_Video, &MEDIASUBTYPE_YUY2},
     {&MEDIATYPE_Video, &MEDIASUBTYPE_YV12},

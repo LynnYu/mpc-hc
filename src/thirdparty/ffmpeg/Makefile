@@ -91,6 +91,7 @@ clean:
 
 # Objects
 SRCS_C = \
+    mpc_helper.c \
     libavcodec/aac_ac3_parser.c \
     libavcodec/aac_parser.c \
     libavcodec/aacadtsdec.c \
@@ -190,7 +191,6 @@ SRCS_C = \
     libavcodec/mlp_parser.c \
     libavcodec/mlpdec.c \
     libavcodec/mlpdsp.c \
-    libavcodec/mpc_helper.c \
     libavcodec/mpeg12.c \
     libavcodec/mpeg12data.c \
     libavcodec/mpeg4audio.c \
@@ -298,9 +298,9 @@ SRCS_C = \
     libavresample/x86/audio_mix_init.c \
 \
     libavutil/audio_fifo.c \
-    libavutil/audioconvert.c \
     libavutil/avstring.c \
     libavutil/bprint.c \
+    libavutil/channel_layout.c \
     libavutil/cpu.c \
     libavutil/crc.c \
     libavutil/dict.c \

@@ -641,7 +641,7 @@ CMainFrame::CMainFrame() :
     m_fClosingState(false)
 {
     m_Lcd.SetVolumeRange(0, 100);
-    m_LastSaveTime.QuadPart = 0;
+    m_liLastSaveTime.QuadPart = 0;
 }
 
 CMainFrame::~CMainFrame()
@@ -688,7 +688,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
         return -1;      // fail to create
     }
 
-    m_pFullscreenWnd = DNew CFullscreenWnd(this);
+    m_pFullscreenWnd = DEBUG_NEW CFullscreenWnd(this);
 
     m_bars.AddTail(&m_wndSeekBar);
     m_bars.AddTail(&m_wndToolBar);
@@ -1661,18 +1661,20 @@ void CMainFrame::OnTimer(UINT_PTR nIDEvent)
 
                     if (!m_fEndOfStream) {
                         CAppSettings& s = AfxGetAppSettings();
-                        FILE_POSITION*  FilePosition = s.CurrentFilePosition();
-                        if (FilePosition) {
-                            FilePosition->llPosition = rtNow;
 
-                            LARGE_INTEGER time;
-                            QueryPerformanceCounter(&time);
-                            LARGE_INTEGER freq;
-                            QueryPerformanceFrequency(&freq);
-                            if ((time.QuadPart - m_LastSaveTime.QuadPart) >= 30 * freq.QuadPart) { // save every half of minute
-                                m_LastSaveTime = time;
-                                if (s.fKeepHistory && s.fRememberFilePos) {
-                                    s.SaveCurrentFilePosition();
+                        if (s.fKeepHistory && s.fRememberFilePos) {
+                            FILE_POSITION* filePosition = s.filePositions.GetLatestEntry();
+
+                            if (filePosition) {
+                                filePosition->llPosition = rtNow;
+
+                                LARGE_INTEGER time;
+                                QueryPerformanceCounter(&time);
+                                LARGE_INTEGER freq;
+                                QueryPerformanceFrequency(&freq);
+                                if ((time.QuadPart - m_liLastSaveTime.QuadPart) >= 30 * freq.QuadPart) { // save every half of minute
+                                    m_liLastSaveTime = time;
+                                    s.filePositions.SaveLatestEntry();
                                 }
                             }
                         }
@@ -2194,14 +2196,15 @@ bool CMainFrame::DoAfterPlaybackEvent()
 bool CMainFrame::GraphEventComplete()
 {
     CAppSettings& s = AfxGetAppSettings();
-    FILE_POSITION*  FilePosition = s.CurrentFilePosition();
 
-    if (FilePosition) {
-        FilePosition->llPosition = 0;
+    if (s.fKeepHistory && s.fRememberFilePos) {
+        FILE_POSITION* filePosition = s.filePositions.GetLatestEntry();
 
-        QueryPerformanceCounter(&m_LastSaveTime);
-        if (s.fKeepHistory && s.fRememberFilePos) {
-            s.SaveCurrentFilePosition();
+        if (filePosition) {
+            filePosition->llPosition = 0;
+
+            QueryPerformanceCounter(&m_liLastSaveTime);
+            s.filePositions.SaveLatestEntry();
         }
     }
 
@@ -2339,9 +2342,9 @@ LRESULT CMainFrame::OnGraphNotify(WPARAM wParam, LPARAM lParam)
                 break;
             case EC_DVD_TITLE_CHANGE: {
                 // Casimir666 : Save current chapter
-                DVD_POSITION* DvdPos = s.CurrentDVDPosition();
-                if (DvdPos) {
-                    DvdPos->lTitle = (DWORD)evParam1;
+                DVD_POSITION* dvdPosition = s.dvdPositions.GetLatestEntry();
+                if (dvdPosition) {
+                    dvdPosition->lTitle = (DWORD)evParam1;
                 }
 
                 if (GetPlaybackMode() == PM_FILE) {
@@ -2380,7 +2383,7 @@ LRESULT CMainFrame::OnGraphNotify(WPARAM wParam, LPARAM lParam)
                             }
 
                             if (s.lDVDTitle != 0) {
-                                s.NewDvd(llDVDGuid);
+                                s.dvdPositions.AddEntry(llDVDGuid);
                                 // Set command line position
                                 hr = pDVDC->PlayTitle(s.lDVDTitle, DVD_CMD_FLAG_Block | DVD_CMD_FLAG_Flush, NULL);
                                 if (s.fShowDebugInfo) {
@@ -2448,22 +2451,22 @@ LRESULT CMainFrame::OnGraphNotify(WPARAM wParam, LPARAM lParam)
                                 m_iDVDTitle   = s.lDVDTitle;
                                 s.lDVDTitle   = 0;
                                 s.lDVDChapter = 0;
-                            } else if (s.fKeepHistory && s.fRememberDVDPos && !s.NewDvd(llDVDGuid)) {
+                            } else if (s.fKeepHistory && s.fRememberDVDPos && !s.dvdPositions.AddEntry(llDVDGuid)) {
                                 // Set last remembered position (if founded...)
-                                DVD_POSITION*   DvdPos = s.CurrentDVDPosition();
+                                DVD_POSITION* dvdPosition = s.dvdPositions.GetLatestEntry();
 
-                                pDVDC->PlayTitle(DvdPos->lTitle, DVD_CMD_FLAG_Block | DVD_CMD_FLAG_Flush, NULL);
+                                pDVDC->PlayTitle(dvdPosition->lTitle, DVD_CMD_FLAG_Block | DVD_CMD_FLAG_Flush, NULL);
                                 pDVDC->Resume(DVD_CMD_FLAG_Block | DVD_CMD_FLAG_Flush, NULL);
 #if 1
                                 if (SUCCEEDED(hr = pDVDC->PlayAtTimeInTitle(
-                                                       DvdPos->lTitle, &DvdPos->Timecode,
+                                                       dvdPosition->lTitle, &dvdPosition->timecode,
                                                        DVD_CMD_FLAG_Block | DVD_CMD_FLAG_Flush, NULL)))
 #else
-                                if (SUCCEEDED(hr = pDVDC->PlayAtTime(&DvdPos->Timecode,
+                                if (SUCCEEDED(hr = pDVDC->PlayAtTime(&dvdPosition->timecode,
                                                                      DVD_CMD_FLAG_Flush, NULL)))
 #endif
                                 {
-                                    m_iDVDTitle = DvdPos->lTitle;
+                                    m_iDVDTitle = dvdPosition->lTitle;
                                 }
                             }
 
@@ -2489,10 +2492,11 @@ LRESULT CMainFrame::OnGraphNotify(WPARAM wParam, LPARAM lParam)
                         if (s.fShowDebugInfo) {
                             m_OSD.DebugMessage(_T("%s"), Domain);
                         }
-                        DVD_POSITION*   DvdPos;
-                        DvdPos = s.CurrentDVDPosition();
-                        if (DvdPos) {
-                            DvdPos->lTitle = m_iDVDTitle;
+                        {
+                            DVD_POSITION* dvdPosition = s.dvdPositions.GetLatestEntry();
+                            if (dvdPosition) {
+                                dvdPosition->lTitle = m_iDVDTitle;
+                            }
                         }
                         break;
                     case DVD_DOMAIN_Stop:
@@ -2549,9 +2553,9 @@ LRESULT CMainFrame::OnGraphNotify(WPARAM wParam, LPARAM lParam)
                 REFERENCE_TIME rtNow = HMSF2RT(*((DVD_HMSF_TIMECODE*)&evParam1), fps);
 
                 // Casimir666 : Save current position in the chapter
-                DVD_POSITION*   DvdPos = s.CurrentDVDPosition();
-                if (DvdPos) {
-                    memcpy(&DvdPos->Timecode, (void*)&evParam1, sizeof(DVD_HMSF_TIMECODE));
+                DVD_POSITION* dvdPosition = s.dvdPositions.GetLatestEntry();
+                if (dvdPosition) {
+                    memcpy(&dvdPosition->timecode, (void*)&evParam1, sizeof(DVD_HMSF_TIMECODE));
                 }
 
                 m_wndSeekBar.SetPos(rtNow);
@@ -4204,7 +4208,7 @@ BOOL CMainFrame::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCDS)
         SendMessage(WM_COMMAND, ID_FILE_CLOSEMEDIA);
         fSetForegroundWindow = true;
 
-        CAutoPtr<OpenDVDData> p(DNew OpenDVDData());
+        CAutoPtr<OpenDVDData> p(DEBUG_NEW OpenDVDData());
         if (p) {
             p->path = s.slFiles.GetHead();
             p->subs.AddTailList(&s.slSubs);
@@ -4253,7 +4257,7 @@ BOOL CMainFrame::OnCopyData(CWnd* pWnd, COPYDATASTRUCT* pCDS)
             SendMessage(WM_COMMAND, ID_FILE_CLOSEMEDIA);
             fSetForegroundWindow = true;
 
-            CAutoPtr<OpenDVDData> p(DNew OpenDVDData());
+            CAutoPtr<OpenDVDData> p(DEBUG_NEW OpenDVDData());
             if (p) {
                 p->path = s.slFiles.GetHead();
                 p->subs.AddTailList(&s.slSubs);
@@ -4321,7 +4325,7 @@ void CMainFrame::OnFileOpendvd()
 
     ShowWindow(SW_SHOW);
 
-    CAutoPtr<OpenDVDData> p(DNew OpenDVDData());
+    CAutoPtr<OpenDVDData> p(DEBUG_NEW OpenDVDData());
     if (p)
     {
         const CAppSettings& s = AfxGetAppSettings();
@@ -4377,7 +4381,7 @@ void CMainFrame::OnFileOpendvd()
     if (!path.IsEmpty()) {
         s.strDVDPath = path;
         if (!OpenBD(path)) {
-            CAutoPtr<OpenDVDData> p(DNew OpenDVDData());
+            CAutoPtr<OpenDVDData> p(DEBUG_NEW OpenDVDData());
             p->path = path;
             p->path.Replace('/', '\\');
             if (p->path[p->path.GetLength() - 1] != '\\') {
@@ -4404,7 +4408,7 @@ void CMainFrame::OnFileOpendevice()
 
     m_wndPlaylistBar.Empty();
 
-    CAutoPtr<OpenDeviceData> p(DNew OpenDeviceData());
+    CAutoPtr<OpenDeviceData> p(DEBUG_NEW OpenDeviceData());
     if (p) {
         p->DisplayName[0] = s.strAnalogVideo;
         p->DisplayName[1] = s.strAnalogAudio;
@@ -4595,7 +4599,7 @@ bool CMainFrame::GetDIB(BYTE** ppData, long& size, bool fSilent)
                 break;
             }
 
-            *ppData = DNew BYTE[size];
+            *ppData = DEBUG_NEW BYTE[size];
             if (!(*ppData)) {
                 return false;
             }
@@ -4632,7 +4636,7 @@ bool CMainFrame::GetDIB(BYTE** ppData, long& size, bool fSilent)
             }
 
             size = (long)dwSize + sizeof(BITMAPINFOHEADER);
-            *ppData = DNew BYTE[size];
+            *ppData = DEBUG_NEW BYTE[size];
             if (!(*ppData)) {
                 return false;
             }
@@ -4646,7 +4650,7 @@ bool CMainFrame::GetDIB(BYTE** ppData, long& size, bool fSilent)
                 break;
             }
 
-            *ppData = DNew BYTE[size];
+            *ppData = DEBUG_NEW BYTE[size];
             if (!(*ppData)) {
                 return false;
             }
@@ -4694,7 +4698,7 @@ void CMainFrame::SaveDIB(LPCTSTR fn, BYTE* pData, long size)
     int srcpitch = w * (bpp >> 3);
     int dstpitch = (w * 3 + 3) / 4 * 4; // round w * 3 to next multiple of 4
 
-    BYTE* p = DNew BYTE[dstpitch * h];
+    BYTE* p = DEBUG_NEW BYTE[dstpitch * h];
 
     const BYTE* src = pData + sizeof(*bih);
     if (bpp <= 8) {
@@ -4723,7 +4727,7 @@ void CMainFrame::SaveDIB(LPCTSTR fn, BYTE* pData, long size)
 
         // Create a buffer large enough to hold the array of ImageCodecInfo
         // objects that will be returned by GetImageDecoders.
-        Gdiplus::ImageCodecInfo* pImageCodecInfo = (Gdiplus::ImageCodecInfo*)new BYTE[size];
+        Gdiplus::ImageCodecInfo* pImageCodecInfo = (Gdiplus::ImageCodecInfo*)DEBUG_NEW BYTE[size];
 
         // GetImageDecoders creates an array of ImageCodecInfo objects
         // and copies that array into a previously allocated buffer.
@@ -4924,7 +4928,7 @@ void CMainFrame::SaveThumbnails(LPCTSTR fn)
         CRenderedTextSubtitle rts(&csSubLock);
         rts.CreateDefaultStyle(0);
         rts.m_dstScreenSize.SetSize(width, height);
-        STSStyle* style = DNew STSStyle();
+        STSStyle* style = DEBUG_NEW STSStyle();
         style->marginRect.SetRectEmpty();
         rts.AddStyle(_T("thumbs"), style);
 
@@ -5007,7 +5011,7 @@ void CMainFrame::SaveThumbnails(LPCTSTR fn)
         CRenderedTextSubtitle rts(&csSubLock);
         rts.CreateDefaultStyle(0);
         rts.m_dstScreenSize.SetSize(width, height);
-        STSStyle* style = DNew STSStyle();
+        STSStyle* style = DEBUG_NEW STSStyle();
         style->marginRect.SetRect(margin * 2, margin * 2, margin * 2, height - infoheight - margin);
         rts.AddStyle(_T("thumbs"), style);
 
@@ -7725,7 +7729,7 @@ void CMainFrame::OnPlayFilters(UINT nID)
 
     if (CComQIPtr<IBaseFilter> pBF = pUnk) {
         HRESULT hr;
-        CComPtr<IPropertyPage> pPP = DNew CInternalPropertyPageTempl<CPinInfoWnd>(NULL, &hr);
+        CComPtr<IPropertyPage> pPP = DEBUG_NEW CInternalPropertyPageTempl<CPinInfoWnd>(NULL, &hr);
         ps.AddPage(pPP, pBF);
     }
 
@@ -7839,7 +7843,7 @@ void CMainFrame::OnPlaySubtitles(UINT nID)
                         STSStyle* val;
                         pRTS->m_styles.GetNextAssoc(pos, key, val);
 
-                        CAutoPtr<CPPageSubStyle> page(DNew CPPageSubStyle());
+                        CAutoPtr<CPPageSubStyle> page(DEBUG_NEW CPPageSubStyle());
                         page->InitStyle(key, *val);
                         pages.Add(page);
                         styles.Add(val);
@@ -9055,6 +9059,7 @@ void CMainFrame::OnRecentFileClear()
 
     CAppSettings& s = AfxGetAppSettings();
 
+    // Empty MPC-HC's recent menu (iterating reverse because the indexes change)
     for (int i = s.MRU.GetSize() - 1; i >= 0; i--) {
         s.MRU.Remove(i);
     }
@@ -9064,8 +9069,16 @@ void CMainFrame::OnRecentFileClear()
     s.MRU.WriteList();
     s.MRUDub.WriteList();
 
-    s.ClearFilePositions();
-    s.ClearDVDPositions();
+    // Empty the "Recent" jump list
+    CComPtr<IApplicationDestinations> pDests;
+    HRESULT hr = pDests.CoCreateInstance(CLSID_ApplicationDestinations, NULL, CLSCTX_INPROC_SERVER);
+    if (SUCCEEDED(hr)) {
+        hr = pDests->RemoveAllDestinations();
+    }
+
+    // Remove the saved positions in media
+    s.filePositions.Empty();
+    s.dvdPositions.Empty();
 }
 
 void CMainFrame::OnUpdateRecentFileClear(CCmdUI* pCmdUI)
@@ -9203,7 +9216,7 @@ void CMainFrame::PlayFavoriteDVD(CString fav)
     HRESULT hr = OleLoadFromStream((IStream*)&stream, IID_IDvdState, (void**)&pDvdState);
     UNREFERENCED_PARAMETER(hr);
 
-    CAutoPtr<OpenDVDData> p(DNew OpenDVDData());
+    CAutoPtr<OpenDVDData> p(DEBUG_NEW OpenDVDData());
     if (p) {
         p->path = fn;
         p->pDvdState = pDvdState;
@@ -10406,7 +10419,7 @@ void CMainFrame::OpenCreateGraphObject(OpenMediaData* pOMD)
             //if (!IsRealEngineCompatible(p->fns.GetHead()))
             //  throw ResStr(IDS_REALVIDEO_INCOMPATIBLE);
 
-            pUnk = (IUnknown*)(INonDelegatingUnknown*)DNew DSObjects::CRealMediaGraph(m_pVideoWnd->m_hWnd, hr);
+            pUnk = (IUnknown*)(INonDelegatingUnknown*)DEBUG_NEW DSObjects::CRealMediaGraph(m_pVideoWnd->m_hWnd, hr);
             if (!pUnk) {
                 throw(UINT)IDS_AG_OUT_OF_MEMORY;
             }
@@ -10418,7 +10431,7 @@ void CMainFrame::OpenCreateGraphObject(OpenMediaData* pOMD)
                 }
             }
         } else if (engine == ShockWave) {
-            pUnk = (IUnknown*)(INonDelegatingUnknown*)DNew DSObjects::CShockwaveGraph(m_pVideoWnd->m_hWnd, hr);
+            pUnk = (IUnknown*)(INonDelegatingUnknown*)DEBUG_NEW DSObjects::CShockwaveGraph(m_pVideoWnd->m_hWnd, hr);
             if (!pUnk) {
                 throw(UINT)IDS_AG_OUT_OF_MEMORY;
             }
@@ -10434,7 +10447,7 @@ void CMainFrame::OpenCreateGraphObject(OpenMediaData* pOMD)
 #ifdef _WIN64   // TODOX64
             //MessageBox (ResStr(IDS_MAINFRM_78), _T(""), MB_OK);
 #else
-            pUnk = (IUnknown*)(INonDelegatingUnknown*)DNew DSObjects::CQuicktimeGraph(m_pVideoWnd->m_hWnd, hr);
+            pUnk = (IUnknown*)(INonDelegatingUnknown*)DEBUG_NEW DSObjects::CQuicktimeGraph(m_pVideoWnd->m_hWnd, hr);
             if (!pUnk) {
                 throw(UINT)IDS_AG_OUT_OF_MEMORY;
             }
@@ -10451,15 +10464,15 @@ void CMainFrame::OpenCreateGraphObject(OpenMediaData* pOMD)
         m_fCustomGraph = m_fRealMediaGraph || m_fShockwaveGraph || m_fQuicktimeGraph;
 
         if (!m_fCustomGraph) {
-            pGB = DNew CFGManagerPlayer(_T("CFGManagerPlayer"), NULL, m_pVideoWnd->m_hWnd);
+            pGB = DEBUG_NEW CFGManagerPlayer(_T("CFGManagerPlayer"), NULL, m_pVideoWnd->m_hWnd);
         }
     } else if (OpenDVDData* p = dynamic_cast<OpenDVDData*>(pOMD)) {
-        pGB = DNew CFGManagerDVD(_T("CFGManagerDVD"), NULL, m_pVideoWnd->m_hWnd);
+        pGB = DEBUG_NEW CFGManagerDVD(_T("CFGManagerDVD"), NULL, m_pVideoWnd->m_hWnd);
     } else if (OpenDeviceData* p = dynamic_cast<OpenDeviceData*>(pOMD)) {
         if (s.iDefaultCaptureDevice == 1) {
-            pGB = DNew CFGManagerBDA(_T("CFGManagerBDA"), NULL, m_pVideoWnd->m_hWnd);
+            pGB = DEBUG_NEW CFGManagerBDA(_T("CFGManagerBDA"), NULL, m_pVideoWnd->m_hWnd);
         } else {
-            pGB = DNew CFGManagerCapture(_T("CFGManagerCapture"), NULL, m_pVideoWnd->m_hWnd);
+            pGB = DEBUG_NEW CFGManagerCapture(_T("CFGManagerCapture"), NULL, m_pVideoWnd->m_hWnd);
         }
     }
 
@@ -10487,13 +10500,13 @@ void CMainFrame::OpenCreateGraphObject(OpenMediaData* pOMD)
         throw(UINT)IDS_GRAPH_TARGET_WND_ERROR;
     }
 
-    m_pProv = (IUnknown*)DNew CKeyProvider();
+    m_pProv = (IUnknown*)DEBUG_NEW CKeyProvider();
 
     if (CComQIPtr<IObjectWithSite> pObjectWithSite = pGB) {
         pObjectWithSite->SetSite(m_pProv);
     }
 
-    m_pCB = DNew CDSMChapterBag(NULL, NULL);
+    m_pCB = DEBUG_NEW CDSMChapterBag(NULL, NULL);
 }
 
 CWnd* CMainFrame::GetModalParent()
@@ -10514,29 +10527,29 @@ void CMainFrame::OpenFile(OpenFileData* pOFD)
 
     CAppSettings& s = AfxGetAppSettings();
 
-    bool fFirst = true;
+    bool bMainFile = true;
 
     POSITION pos = pOFD->fns.GetHeadPosition();
     while (pos) {
         CString fn = pOFD->fns.GetNext(pos);
 
         fn.Trim();
-        if (fn.IsEmpty() && !fFirst) {
+        if (fn.IsEmpty() && !bMainFile) {
             break;
         }
 
         HRESULT hr = pGB->RenderFile(CStringW(fn), NULL);
 
-        if (s.fKeepHistory && s.fRememberFilePos && !s.NewFile(fn)) {
-            REFERENCE_TIME rtPos = s.CurrentFilePosition()->llPosition;
+        if (bMainFile && s.fKeepHistory && s.fRememberFilePos && !s.filePositions.AddEntry(fn)) {
+            REFERENCE_TIME rtPos = s.filePositions.GetLatestEntry()->llPosition;
             if (pMS) {
                 pMS->SetPositions(&rtPos, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
             }
         }
-        QueryPerformanceCounter(&m_LastSaveTime);
+        QueryPerformanceCounter(&m_liLastSaveTime);
 
         if (FAILED(hr)) {
-            if (fFirst) {
+            if (bMainFile) {
                 if (s.fReportFailedPins) {
                     CComQIPtr<IGraphBuilderDeadEnd> pGBDE = pGB;
                     if (pGBDE && pGBDE->GetCount()) {
@@ -10589,18 +10602,18 @@ void CMainFrame::OpenFile(OpenFileData* pOFD)
         }
 
         if (s.fKeepHistory) {
-            CRecentFileList* pMRU = fFirst ? &s.MRU : &s.MRUDub;
+            CRecentFileList* pMRU = bMainFile ? &s.MRU : &s.MRUDub;
             pMRU->ReadList();
             pMRU->Add(fn);
             pMRU->WriteList();
             SHAddToRecentDocs(SHARD_PATH, fn);
         }
 
-        if (fFirst) {
+        if (bMainFile) {
             pOFD->title = fn;
         }
 
-        fFirst = false;
+        bMainFile = false;
 
         if (m_fCustomGraph) {
             break;
@@ -10651,7 +10664,7 @@ void CMainFrame::SetupChapters()
     // Due to smart pointers the old chapter bag won't
     // be deleted until all classes release it.
     m_pCB.Release();
-    m_pCB = DNew CDSMChapterBag(NULL, NULL);
+    m_pCB = DEBUG_NEW CDSMChapterBag(NULL, NULL);
 
     CInterfaceList<IBaseFilter> pBFs;
     BeginEnumFilters(pGB, pEF, pBF);
@@ -10787,7 +10800,9 @@ void CMainFrame::SetupChapters()
 
     m_pCB->ChapSort();
 
-    m_wndSeekBar.SetChapterBag(m_pCB);
+    if (AfxGetAppSettings().fShowChapters) {
+        m_wndSeekBar.SetChapterBag(m_pCB);
+    }
 }
 
 void CMainFrame::SetupDVDChapters()
@@ -10796,7 +10811,7 @@ void CMainFrame::SetupDVDChapters()
     // Due to smart pointers the old chapter bag won't
     // be deleted until all classes release it.
     m_pCB.Release();
-    m_pCB = DNew CDSMChapterBag(NULL, NULL);
+    m_pCB = DEBUG_NEW CDSMChapterBag(NULL, NULL);
 
     WCHAR buff[_MAX_PATH];
     ULONG len = 0;
@@ -10823,7 +10838,9 @@ void CMainFrame::SetupDVDChapters()
 
     m_pCB->ChapSort();
 
-    m_wndSeekBar.SetChapterBag(m_pCB);
+    if (AfxGetAppSettings().fShowChapters) {
+        m_wndSeekBar.SetChapterBag(m_pCB);
+    }
 }
 
 void CMainFrame::OpenDVD(OpenDVDData* pODD)
@@ -11072,7 +11089,7 @@ void CMainFrame::OpenCustomizeGraph()
     const CRenderersSettings& r = s.m_RenderersSettings;
     if (r.m_AdvRendSets.bSynchronizeVideo && s.iDSVideoRendererType == VIDRNDT_DS_SYNC) {
         HRESULT hr;
-        m_pRefClock = DNew CSyncClockFilter(NULL, &hr);
+        m_pRefClock = DEBUG_NEW CSyncClockFilter(NULL, &hr);
         CStringW name;
         name = L"SyncClock Filter";
         pGB->AddFilter(m_pRefClock, name);
@@ -11096,12 +11113,12 @@ void CMainFrame::OpenCustomizeGraph()
     if (GetPlaybackMode() == PM_DVD) {
         BeginEnumFilters(pGB, pEF, pBF) {
             if (CComQIPtr<IDirectVobSub2> pDVS2 = pBF) {
-                //pDVS2->AdviseSubClock(m_pSubClock = DNew CSubClock);
+                //pDVS2->AdviseSubClock(m_pSubClock = DEBUG_NEW CSubClock);
                 //break;
 
                 // TODO: test multiple dvobsub instances with one clock
                 if (!m_pSubClock) {
-                    m_pSubClock = DNew CSubClock;
+                    m_pSubClock = DEBUG_NEW CSubClock;
                 }
                 pDVS2->AdviseSubClock(m_pSubClock);
             }
@@ -12069,7 +12086,6 @@ void CMainFrame::CloseMediaPrivate()
     m_closingmsg.LoadString(IDS_CONTROLS_CLOSED);
 
     AfxGetAppSettings().nCLSwitches &= CLSW_OPEN | CLSW_PLAY | CLSW_AFTERPLAYBACK_MASK | CLSW_NOFOCUS;
-    AfxGetAppSettings().ResetPositions();
 
     SetLoadState(MLS_CLOSED);
 }
@@ -12397,7 +12413,7 @@ void CMainFrame::SetupFiltersSubMenu()
                 continue;
             }
 
-            CAutoPtr<CMenu> pSubSub(DNew CMenu);
+            CAutoPtr<CMenu> pSubSub(DEBUG_NEW CMenu);
             pSubSub->CreatePopupMenu();
 
             int nPPages = 0;
@@ -13555,7 +13571,7 @@ void CMainFrame::AddTextPassThruFilter()
                 continue;
             }
 
-            CComQIPtr<IBaseFilter> pTPTF = DNew CTextPassThruFilter(this);
+            CComQIPtr<IBaseFilter> pTPTF = DEBUG_NEW CTextPassThruFilter(this);
             CStringW name;
             name.Format(L"TextPassThru%08x", pTPTF);
             if (FAILED(pGB->AddFilter(pTPTF, name))) {
@@ -13586,7 +13602,7 @@ bool CMainFrame::LoadSubtitle(CString fn, ISubStream** actualStream)
     // TMP: maybe this will catch something for those who get a runtime error dialog when opening subtitles from cds
     try {
         if (!pSubStream) {
-            CAutoPtr<CVobSubFile> pVSF(DNew CVobSubFile(&m_csSubLock));
+            CAutoPtr<CVobSubFile> pVSF(DEBUG_NEW CVobSubFile(&m_csSubLock));
             CString ext = CPath(fn).GetExtension().MakeLower();
             if ((ext == _T(".idx") || ext == _T(".sub")) && pVSF && pVSF->Open(fn) && pVSF->GetStreamCount() > 0) {
                 pSubStream = pVSF.Detach();
@@ -13594,7 +13610,7 @@ bool CMainFrame::LoadSubtitle(CString fn, ISubStream** actualStream)
         }
 
         if (!pSubStream) {
-            CAutoPtr<CRenderedTextSubtitle> pRTS(DNew CRenderedTextSubtitle(&m_csSubLock, &AfxGetAppSettings().subdefstyle, AfxGetAppSettings().fUseDefaultSubtitlesStyle));
+            CAutoPtr<CRenderedTextSubtitle> pRTS(DEBUG_NEW CRenderedTextSubtitle(&m_csSubLock, &AfxGetAppSettings().subdefstyle, AfxGetAppSettings().fUseDefaultSubtitlesStyle));
 
             // The filename of the video file
             CString videoName = m_wndPlaylistBar.GetCurFileName();
@@ -14342,7 +14358,7 @@ void CMainFrame::ShowOptions(int idPage)
 void CMainFrame::StartWebServer(int nPort)
 {
     if (!m_pWebServer) {
-        m_pWebServer.Attach(DNew CWebServer(this, nPort));
+        m_pWebServer.Attach(DEBUG_NEW CWebServer(this, nPort));
     }
 }
 
@@ -15012,7 +15028,7 @@ void CMainFrame::SendAPICommand(MPCAPI_COMMAND nCommand, LPCWSTR fmt, ...)
         va_start(args, fmt);
 
         int nBufferLen = _vsctprintf(fmt, args) + 1; // _vsctprintf doesn't count the null terminator
-        TCHAR* pBuff = DNew TCHAR[nBufferLen];
+        TCHAR* pBuff = DEBUG_NEW TCHAR[nBufferLen];
         _vstprintf_s(pBuff, nBufferLen, fmt, args);
 
         CDS.cbData = (DWORD)nBufferLen * sizeof(TCHAR);

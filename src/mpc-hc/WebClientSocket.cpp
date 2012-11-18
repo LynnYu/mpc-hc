@@ -28,6 +28,9 @@
 #include "WebServer.h"
 #include "WebClientSocket.h"
 
+#define MAX_HEADER_SIZE 512 * 1024
+#define MAX_DATA_SIZE 2 * 1024 * 1024
+
 CWebClientSocket::CWebClientSocket(CWebServer* pWebServer, CMainFrame* pMainFrame)
     : m_pWebServer(pWebServer)
     , m_pMainFrame(pMainFrame)
@@ -37,7 +40,7 @@ CWebClientSocket::CWebClientSocket(CWebServer* pWebServer, CMainFrame* pMainFram
     , m_parsingState(PARSING_HEADER)
     , m_dataLen(0)
 {
-    m_buff = DNew char[m_buffMaxLen];
+    m_buff = DEBUG_NEW char[m_buffMaxLen];
 }
 
 CWebClientSocket::~CWebClientSocket()
@@ -312,6 +315,13 @@ void CWebClientSocket::OnReceive(int nErrorCode)
 
                     if (headerEnd) {
                         ParseHeader(headerEnd);
+                        if (m_dataLen > MAX_DATA_SIZE) {
+                            // Refuse the connection if someone tries to send
+                            // more than MAX_DATA_SIZE of size.
+                            OnClose(0);
+                            return;
+                        }
+
                         headerEnd += 4;
                         m_buffLen = max(int(m_buff + m_buffLen - headerEnd), 0);
                         if (m_buffLen > 0) {
@@ -320,6 +330,11 @@ void CWebClientSocket::OnReceive(int nErrorCode)
                                 ParsePostData();
                             }
                         }
+                    } else if (m_buffLen > MAX_HEADER_SIZE) {
+                        // If we got more than MAX_HEADER_SIZE of data without finding
+                        // the end of the header we close the connection.
+                        OnClose(0);
+                        return;
                     } else {
                         // Start next search from current end of the file
                         m_buffLenProcessed += nRead;
@@ -635,7 +650,7 @@ bool CWebClientSocket::OnBrowser(CStringA& hdr, CStringA& body, CStringA& mime)
     }
 
     m_pWebServer->LoadPage(IDR_HTML_BROWSER, body, AToT(m_path));
-    body.Replace("[currentdir]", UTF8(path));
+    body.Replace("[currentdir]", HtmlSpecialChars(UTF8(path)));
     body.Replace("[currentfiles]", files);
 
     return true;
@@ -852,7 +867,7 @@ bool CWebClientSocket::OnSnapShotJpeg(CStringA& hdr, CStringA& body, CStringA& m
         }
         int w = bih->biWidth;
         int h = abs(bih->biHeight);
-        BYTE* p = DNew BYTE[w * h * 4];
+        BYTE* p = DEBUG_NEW BYTE[w * h * 4];
 
         const BYTE* src = pData + sizeof(*bih);
         if (bpp <= 8) {

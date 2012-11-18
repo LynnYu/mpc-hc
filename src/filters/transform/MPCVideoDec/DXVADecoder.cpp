@@ -70,7 +70,7 @@ void CDXVADecoder::Init(CMPCVideoDecFilter* pFilter, DXVAMode nMode, int nPicEnt
     m_pFilter           = pFilter;
     m_nMode             = nMode;
     m_nPicEntryNumber   = nPicEntryNumber;
-    m_pPictureStore     = DNew PICTURE_STORE[nPicEntryNumber];
+    m_pPictureStore     = DEBUG_NEW PICTURE_STORE[nPicEntryNumber];
     m_dwNumBuffersInfo  = 0;
     m_bNeedChangeAspect = true;
 
@@ -89,7 +89,7 @@ void CDXVADecoder::Init(CMPCVideoDecFilter* pFilter, DXVAMode nMode, int nPicEnt
 // === Public functions
 void CDXVADecoder::AllocExecuteParams(int nSize)
 {
-    m_ExecuteParams.pCompressedBuffers = DNew DXVA2_DecodeBufferDesc[nSize];
+    m_ExecuteParams.pCompressedBuffers = DEBUG_NEW DXVA2_DecodeBufferDesc[nSize];
 
     for (int i = 0; i < nSize; i++) {
         memset(&m_ExecuteParams.pCompressedBuffers[i], 0, sizeof(DXVA2_DecodeBufferDesc));
@@ -182,11 +182,11 @@ CDXVADecoder* CDXVADecoder::CreateDecoder(CMPCVideoDecFilter* pFilter, IAMVideoA
     CDXVADecoder* pDecoder = NULL;
 
     if ((*guidDecoder == DXVA2_ModeH264_E) || (*guidDecoder == DXVA2_ModeH264_F) || (*guidDecoder == DXVA_Intel_H264_ClearVideo)) {
-        pDecoder = DNew CDXVADecoderH264(pFilter, pAMVideoAccelerator, H264_VLD, nPicEntryNumber);
+        pDecoder = DEBUG_NEW CDXVADecoderH264(pFilter, pAMVideoAccelerator, H264_VLD, nPicEntryNumber);
     } else if (*guidDecoder == DXVA2_ModeVC1_D) {
-        pDecoder = DNew CDXVADecoderVC1(pFilter, pAMVideoAccelerator, VC1_VLD, nPicEntryNumber);
+        pDecoder = DEBUG_NEW CDXVADecoderVC1(pFilter, pAMVideoAccelerator, VC1_VLD, nPicEntryNumber);
     } else if (*guidDecoder == DXVA2_ModeMPEG2_VLD) {
-        pDecoder = DNew CDXVADecoderMpeg2(pFilter, pAMVideoAccelerator, MPEG2_VLD, nPicEntryNumber);
+        pDecoder = DEBUG_NEW CDXVADecoderMpeg2(pFilter, pAMVideoAccelerator, MPEG2_VLD, nPicEntryNumber);
     } else {
         ASSERT(FALSE);     // Unknown decoder !!
     }
@@ -199,11 +199,11 @@ CDXVADecoder* CDXVADecoder::CreateDecoder(CMPCVideoDecFilter* pFilter, IDirectXV
     CDXVADecoder* pDecoder = NULL;
 
     if ((*guidDecoder == DXVA2_ModeH264_E) || (*guidDecoder == DXVA2_ModeH264_F) || (*guidDecoder == DXVA_Intel_H264_ClearVideo)) {
-        pDecoder = DNew CDXVADecoderH264(pFilter, pDirectXVideoDec, H264_VLD, nPicEntryNumber, pDXVA2Config);
+        pDecoder = DEBUG_NEW CDXVADecoderH264(pFilter, pDirectXVideoDec, H264_VLD, nPicEntryNumber, pDXVA2Config);
     } else if (*guidDecoder == DXVA2_ModeVC1_D) {
-        pDecoder = DNew CDXVADecoderVC1(pFilter, pDirectXVideoDec, VC1_VLD, nPicEntryNumber, pDXVA2Config);
+        pDecoder = DEBUG_NEW CDXVADecoderVC1(pFilter, pDirectXVideoDec, VC1_VLD, nPicEntryNumber, pDXVA2Config);
     } else if (*guidDecoder == DXVA2_ModeMPEG2_VLD) {
-        pDecoder = DNew CDXVADecoderMpeg2(pFilter, pDirectXVideoDec, MPEG2_VLD, nPicEntryNumber, pDXVA2Config);
+        pDecoder = DEBUG_NEW CDXVADecoderMpeg2(pFilter, pDirectXVideoDec, MPEG2_VLD, nPicEntryNumber, pDXVA2Config);
     } else {
         ASSERT(FALSE);     // Unknown decoder !!
     }
@@ -563,11 +563,27 @@ void CDXVADecoder::SetTypeSpecificFlags(PICTURE_STORE* pPicture, IMediaSample* p
         if (SUCCEEDED(pMS2->GetProperties(sizeof(props), (BYTE*)&props))) {
             props.dwTypeSpecificFlags &= ~0x7f;
 
-            m_pFilter->SetFrameType(pPicture->n1FieldType);
+            FF_FIELD_TYPE fieldType;
+            switch (m_pFilter->GetInterlacedFlag()) {
+                case MPCVC_INTERLACED_PROGRESSIVE:
+                    fieldType = PICT_FRAME;
+                    break;
+                case MPCVC_INTERLACED_TOP_FIELD_FIRST:
+                    fieldType = PICT_TOP_FIELD;
+                    break;
+                case MPCVC_INTERLACED_BOTTOM_FIELD_FIRST:
+                    fieldType = PICT_BOTTOM_FIELD;
+                    break;
+                default:
+                    fieldType = pPicture->n1FieldType;
+                    break;
+            }
 
-            if (pPicture->n1FieldType == PICT_FRAME) {
+            m_pFilter->SetFrameType(fieldType);
+
+            if (fieldType == PICT_FRAME) {
                 props.dwTypeSpecificFlags |= AM_VIDEO_FLAG_WEAVE;
-            } else if (pPicture->n1FieldType == PICT_TOP_FIELD) {
+            } else if (fieldType == PICT_TOP_FIELD) {
                 props.dwTypeSpecificFlags |= AM_VIDEO_FLAG_FIELD1FIRST;
             }
 
