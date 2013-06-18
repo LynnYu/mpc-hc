@@ -1,21 +1,8 @@
-// File_Dummy - Fill with Name of tags
-// Copyright (C) 2005-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // Pre-compilation
@@ -108,9 +95,9 @@ void File_Dummy::FileHeader_Parse()
         Fill(Stream_Text, 0, Text_Codec_Url, "http://mediainfo.sourceforge.net");
         Fill(Stream_Text, 0, Text_Language, "en");
         Fill(Stream_Text, 0, Text_Language_More, "Forced");
-        Stream_Prepare(Stream_Chapters);
-        Fill(Stream_Chapters, 0, Chapters_Total, "16");
-        Fill(Stream_Chapters, 0, Chapters_Language, "en");
+        Stream_Prepare(Stream_Other);
+        Fill(Stream_Other, 0, Chapters_Total, "16");
+        Fill(Stream_Other, 0, Chapters_Language, "en");
     }
 
     Accept();
@@ -313,12 +300,12 @@ void File_Dummy::Fill_Dummy_Text()
 //---------------------------------------------------------------------------
 void File_Dummy::Fill_Dummy_Chapters()
 {
-    Stream_Prepare(Stream_Chapters);
-    Fill(Stream_Chapters, 0, Chapters_ID, "ID");
-    Fill(Stream_Chapters, 0, Chapters_UniqueID, "UniqueID");
-    Fill(Stream_Chapters, 0, Chapters_Title, "Title");
-    Fill(Stream_Chapters, 0, Chapters_Total, "Total");
-    Fill(Stream_Chapters, 0, Chapters_Language, "de");
+    Stream_Prepare(Stream_Other);
+    Fill(Stream_Other, 0, Chapters_ID, "ID");
+    Fill(Stream_Other, 0, Chapters_UniqueID, "UniqueID");
+    Fill(Stream_Other, 0, Chapters_Title, "Title");
+    Fill(Stream_Other, 0, Chapters_Total, "Total");
+    Fill(Stream_Other, 0, Chapters_Language, "de");
 }
 
 } //NameSpace

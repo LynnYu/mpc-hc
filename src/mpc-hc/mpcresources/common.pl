@@ -1,6 +1,6 @@
 #/bin/perl
 #
-# (C) 2010-2012 see Authors.txt
+# (C) 2010-2013 see Authors.txt
 #
 # This file is part of MPC-HC.
 #
@@ -145,7 +145,7 @@ sub readDialog {
 
         my $line = skipNonTranslatedStr($_);
 
-        if ($line=~/("[^"](?:[^"]|"")*")/) {
+        if ($line=~/("(?:[^"]|"")+")/) {
             my $value = $1;
             if ($line =~ /(?:,|\s)(ID[^,]*),/) {
                 my $id = $1;
@@ -256,9 +256,9 @@ sub skipNonTranslatedStr {
                     |\\000|(LANGUAGE.+)?\\r\\n|\+\/-												#skip \r\n  \000 +- etc
                     |<a>http.+<\/a>|http:\/\/														#skip http links
                     |Media\sPlayer\sClassic\s-?\sHome\sCinema|mpc-hc|MPC-HC\sTeam					#skip app names
-            |Comments|CompanyName|FileDescription|FileVersion|InternalName|VarFileInfo|StringFileInfo|Translation
-            |LegalCopyright|OriginalFilename|ProductName|ProductVersion								#skip versioninfo for locale rc not in mplayerc.rc
-                |[-&\/\d\s\.:,%]+(Hz)?																#skip any thing like 6.4.0.0, 100%, 23.976Hz
+                    |Comments|CompanyName|FileDescription|FileVersion|InternalName|VarFileInfo|StringFileInfo|Translation
+                    |LegalCopyright|OriginalFilename|ProductName|ProductVersion								#skip versioninfo for locale rc not in mplayerc.rc
+                    |(&)?(\d+[-&\/\s\.:,]*|%|\.\.\.)+(Hz)?												#skip any thing like 6.4.0.0, 100%, 23.976Hz
                 )
                 "//gx;
     $line;
@@ -276,12 +276,14 @@ sub Trace {
 
 #--------------------------------------------------------------------------------------------------
 sub readFile {
-    my ($filename, $withBOM) = @_;
+    my ($filename, $encoding) = @_;
 
     open(INPUT, "<$filename") || die "Cannot open $filename to read";
-    if ($withBOM == 0) {
+    if ($encoding == 0) {
+        binmode(INPUT);
+    } elsif ($encoding == 1) {
         binmode(INPUT, ":encoding(UTF8)");
-    } else {
+    } elsif ($encoding == 2) {
         binmode(INPUT, ":encoding(UTF16-LE)");
     }
 

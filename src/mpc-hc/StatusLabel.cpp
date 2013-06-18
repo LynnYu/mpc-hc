@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -33,13 +33,13 @@ CStatusLabel::CStatusLabel(bool fRightAlign, bool fAddEllipses)
     : m_fRightAlign(fRightAlign)
     , m_fAddEllipses(fAddEllipses)
 {
-    m_font.m_hObject = NULL;
+    m_font.m_hObject = nullptr;
     if (SysVersion::IsVistaOrLater()) {
         LOGFONT lf;
         GetStatusFont(&lf);
         VERIFY(m_font.CreateFontIndirect(&lf));
     } else {
-        HDC hdc = ::GetDC(NULL);
+        HDC hdc = ::GetDC(nullptr);
         double scale = 1.0 * GetDeviceCaps(hdc, LOGPIXELSY) / 96.0;
         ::ReleaseDC(0, hdc);
         VERIFY(m_font.CreateFont(int(14 * scale), 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
@@ -57,6 +57,19 @@ BEGIN_MESSAGE_MAP(CStatusLabel, CStatic)
 END_MESSAGE_MAP()
 
 // CStatusLabel message handlers
+
+BOOL CStatusLabel::PreTranslateMessage(MSG* pMsg)
+{
+    // Notify the parent window if the left button of the mouse is pressed so
+    // that the user can drag the window by clicking on the information panel.
+    if (pMsg->message == WM_LBUTTONDOWN) {
+        CPoint p(pMsg->lParam);
+        MapWindowPoints(GetParent(), &p, 1);
+        GetParent()->SendMessage(pMsg->message, pMsg->wParam, MAKELPARAM(p.x, p.y));
+    }
+
+    return __super::PreTranslateMessage(pMsg);
+}
 
 void CStatusLabel::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {

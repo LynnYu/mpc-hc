@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -39,7 +39,7 @@ public:
     int m_nJumpDistS;
     int m_nJumpDistM;
     int m_nJumpDistL;
-    BOOL m_fNotifyMSN;
+    BOOL m_fNotifySkype;
 
     BOOL m_fPreventMinimize;
     BOOL m_fUseWin7TaskBar;
@@ -48,8 +48,8 @@ public:
     CComboBox m_TimeTooltipPosition;
     CComboBox m_FontSize;
     CComboBox m_FontType;
-    int m_OSD_Size;
-    CString m_OSD_Font;
+    int m_nOSDSize;
+    CString m_strOSDFont;
 
     BOOL m_fFastSeek;
     BOOL m_fShowChapters;

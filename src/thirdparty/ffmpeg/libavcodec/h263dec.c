@@ -121,7 +121,7 @@ av_cold int ff_h263_decode_init(AVCodecContext *avctx)
         if ((ret = ff_MPV_common_init(s)) < 0)
             return ret;
 
-        ff_h263_decode_init_vlc(s);
+        ff_h263_decode_init_vlc();
 
     return 0;
 }
@@ -268,7 +268,7 @@ static int decode_slice(MpegEncContext *s){
         s->mb_x= 0;
     }
 
-    assert(s->mb_x==0 && s->mb_y==s->mb_height);
+    av_assert1(s->mb_x==0 && s->mb_y==s->mb_height);
 
     if(s->codec_id==AV_CODEC_ID_MPEG4
        && (s->workaround_bugs&FF_BUG_AUTODETECT)
@@ -346,7 +346,7 @@ static int decode_slice(MpegEncContext *s){
 }
 
 int ff_h263_decode_frame(AVCodecContext *avctx,
-                             void *data, int *data_size,
+                             void *data, int *got_frame,
                              AVPacket *avpkt)
 {
     const uint8_t *buf = avpkt->data;
@@ -368,7 +368,7 @@ uint64_t time= rdtsc();
             *pict = s->next_picture_ptr->f;
             s->next_picture_ptr= NULL;
 
-            *data_size = sizeof(AVFrame);
+            *got_frame = 1;
         }
 
         return 0;
@@ -381,10 +381,8 @@ uint64_t time= rdtsc();
             next= ff_mpeg4_find_frame_end(&s->parse_context, buf, buf_size);
         }else if(CONFIG_H263_DECODER && s->codec_id==AV_CODEC_ID_H263){
             next= ff_h263_find_frame_end(&s->parse_context, buf, buf_size);
-// ==> Start patch MPC
-/*        }else if(CONFIG_H263P_DECODER && s->codec_id==AV_CODEC_ID_H263P){
-            next= ff_h263_find_frame_end(&s->parse_context, buf, buf_size);*/
-// <== End patch MPC
+        }else if(CONFIG_H263P_DECODER && s->codec_id==AV_CODEC_ID_H263P){
+            next= ff_h263_find_frame_end(&s->parse_context, buf, buf_size);
         }else{
             av_log(s->avctx, AV_LOG_ERROR, "this codec does not support truncated bitstreams\n");
             return AVERROR(EINVAL);
@@ -471,7 +469,7 @@ retry:
     if(s->xvid_build==-1 && s->divx_version==-1 && s->lavc_build==-1){
         if(s->stream_codec_tag == AV_RL32("XVID") ||
            s->codec_tag == AV_RL32("XVID") || s->codec_tag == AV_RL32("XVIX") ||
-           s->codec_tag == AV_RL32("RMP4") ||
+           s->codec_tag == AV_RL32("RMP4") || s->codec_tag == AV_RL32("ZMP4") ||
            s->codec_tag == AV_RL32("SIPP")
            )
             s->xvid_build= 0;
@@ -630,7 +628,9 @@ retry:
     s->current_picture.f.key_frame = s->pict_type == AV_PICTURE_TYPE_I;
 
     /* skip B-frames if we don't have reference frames */
-    if(s->last_picture_ptr==NULL && (s->pict_type==AV_PICTURE_TYPE_B || s->dropable)) return get_consumed_bytes(s, buf_size);
+    if (s->last_picture_ptr == NULL &&
+        (s->pict_type == AV_PICTURE_TYPE_B || s->droppable))
+        return get_consumed_bytes(s, buf_size);
     if(   (avctx->skip_frame >= AVDISCARD_NONREF && s->pict_type==AV_PICTURE_TYPE_B)
        || (avctx->skip_frame >= AVDISCARD_NONKEY && s->pict_type!=AV_PICTURE_TYPE_I)
        ||  avctx->skip_frame >= AVDISCARD_ALL)
@@ -643,10 +643,7 @@ retry:
             s->next_p_frame_damaged=0;
     }
 
-    if((s->avctx->flags2 & CODEC_FLAG2_FAST) && s->pict_type==AV_PICTURE_TYPE_B){
-        s->me.qpel_put= s->dsp.put_2tap_qpel_pixels_tab;
-        s->me.qpel_avg= s->dsp.avg_2tap_qpel_pixels_tab;
-    }else if((!s->no_rounding) || s->pict_type==AV_PICTURE_TYPE_B){
+    if((!s->no_rounding) || s->pict_type==AV_PICTURE_TYPE_B){
         s->me.qpel_put= s->dsp.put_qpel_pixels_tab;
         s->me.qpel_avg= s->dsp.avg_qpel_pixels_tab;
     }else{
@@ -707,9 +704,9 @@ retry:
             s->error_status_table[s->mb_num-1]= ER_MB_ERROR;
         }
 
-    assert(s->bitstream_buffer_size==0);
+    av_assert1(s->bitstream_buffer_size==0);
 frame_end:
-    /* divx 5.01+ bistream reorder stuff */
+    /* divx 5.01+ bitstream reorder stuff */
     if(s->codec_id==AV_CODEC_ID_MPEG4 && s->divx_packed){
         int current_pos= s->gb.buffer == s->bitstream_buffer ? 0 : (get_bits_count(&s->gb)>>3);
         int startcode_found=0;
@@ -755,7 +752,7 @@ intrax8_decoded:
     }
 
     if(s->last_picture_ptr || s->low_delay){
-        *data_size = sizeof(AVFrame);
+        *got_frame = 1;
         ff_print_debug_info(s, pict);
     }
 

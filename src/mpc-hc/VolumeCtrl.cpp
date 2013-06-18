@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -41,10 +41,12 @@ bool CVolumeCtrl::Create(CWnd* pParentWnd)
     if (!CSliderCtrl::Create(WS_CHILD | WS_VISIBLE | TBS_NOTICKS | TBS_HORZ | TBS_TOOLTIPS, CRect(0, 0, 0, 0), pParentWnd, IDC_SLIDER1)) {
         return false;
     }
+
+    const CAppSettings& s = AfxGetAppSettings();
     EnableToolTips(TRUE);
     SetRange(0, 100);
-    SetPosInternal(AfxGetAppSettings().nVolume);
-    SetPageSize(5);
+    SetPos(s.nVolume);
+    SetPageSize(s.nVolumeStep);
     SetLineSize(0);
 
     return true;
@@ -200,7 +202,7 @@ BOOL CVolumeCtrl::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
     CString str;
     str.Format(_T("%d%%"), GetPos());
     _tcscpy_s(pTTT->szText, str);
-    pTTT->hinst = NULL;
+    pTTT->hinst = nullptr;
 
     *pResult = 0;
 

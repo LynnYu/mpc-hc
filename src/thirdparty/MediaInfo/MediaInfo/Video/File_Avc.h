@@ -1,21 +1,8 @@
-// File_Avc - Info for AVC Video files
-// Copyright (C) 2006-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 #ifndef MediaInfo_AvcH
@@ -53,6 +40,8 @@ public :
     ~File_Avc();
 
 private :
+    File_Avc(const File_Avc &File_Avc); //No copy
+
     //Structures - seq_parameter_set
     struct seq_parameter_set_struct
     {
@@ -165,10 +154,25 @@ private :
         bool    CpbDpbDelaysPresentFlag() {return vui_parameters && (vui_parameters->NAL || vui_parameters->VCL);}
         int8u   ChromaArrayType() {return separate_colour_plane_flag?0:chroma_format_idc;}
 
+        #if MEDIAINFO_DEMUX
+        int8u*  Iso14496_10_Buffer;
+        size_t  Iso14496_10_Buffer_Size;
+        #endif //MEDIAINFO_DEMUX
+
         //Constructor/Destructor
+        #if MEDIAINFO_DEMUX
+        seq_parameter_set_struct()
+        {
+            Iso14496_10_Buffer=NULL;
+            Iso14496_10_Buffer_Size=0;
+        }
+        #endif //MEDIAINFO_DEMUX
         ~seq_parameter_set_struct()
         {
             delete vui_parameters; //vui_parameters=NULL;
+            #if MEDIAINFO_DEMUX
+                delete[] Iso14496_10_Buffer;
+            #endif //MEDIAINFO_DEMUX
         }
     };
     typedef vector<seq_parameter_set_struct*> seq_parameter_set_structs;
@@ -185,6 +189,26 @@ private :
         bool    weighted_pred_flag;
         bool    redundant_pic_cnt_present_flag;
         bool    IsSynched; //Computed value
+
+        #if MEDIAINFO_DEMUX
+        int8u*  Iso14496_10_Buffer;
+        size_t  Iso14496_10_Buffer_Size;
+        #endif //MEDIAINFO_DEMUX
+
+        //Constructor/Destructor
+        #if MEDIAINFO_DEMUX
+        pic_parameter_set_struct()
+        {
+            Iso14496_10_Buffer=NULL;
+            Iso14496_10_Buffer_Size=0;
+        }
+        #endif //MEDIAINFO_DEMUX
+        ~pic_parameter_set_struct()
+        {
+            #if MEDIAINFO_DEMUX
+                delete[] Iso14496_10_Buffer;
+            #endif //MEDIAINFO_DEMUX
+        }
     };
     typedef vector<pic_parameter_set_struct*> pic_parameter_set_structs;
 
@@ -205,6 +229,7 @@ private :
     //Buffer - Demux
     #if MEDIAINFO_DEMUX
     bool Demux_UnpacketizeContainer_Test();
+    bool Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10;
     #endif //MEDIAINFO_DEMUX
 
     //Buffer - Global

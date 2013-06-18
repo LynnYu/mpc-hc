@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -23,10 +23,9 @@
 #include <winioctl.h>
 #include "TextFile.h"
 #include "VobSubFile.h"
-#ifndef USE_UNRAR_STATIC
-#define USE_UNRAR_STATIC
-#endif
-#ifndef USE_UNRAR_STATIC
+#include "mpc-hc_config.h"
+
+#if !USE_STATIC_UNRAR
 #include "unrar.h"
 #else
 #include "unrar/dll.hpp"
@@ -188,10 +187,11 @@ struct lang_type {
 
 int find_lang(unsigned short id)
 {
-    int mid, lo = 0, hi = _countof(lang_tbl) - 1;
+    int lo = 0, hi = _countof(lang_tbl) - 1;
 
     while (lo < hi) {
-        mid = (lo + hi) >> 1;
+        int mid = (lo + hi) >> 1;
+
         if (id < lang_tbl[mid].id) {
             hi = mid;
         } else if (id > lang_tbl[mid].id) {
@@ -362,28 +362,24 @@ bool CVobSubFile::Open(CString fn)
     return false;
 }
 
-bool CVobSubFile::Save(CString fn, SubFormat sf)
+bool CVobSubFile::Save(CString fn, int delay, SubFormat sf)
 {
     TrimExtension(fn);
 
-    CVobSubFile vsf(NULL);
+    CVobSubFile vsf(nullptr);
     if (!vsf.Copy(*this)) {
         return false;
     }
 
     switch (sf) {
         case VobSub:
-            return vsf.SaveVobSub(fn);
-            break;
+            return vsf.SaveVobSub(fn, delay);
         case WinSubMux:
-            return vsf.SaveWinSubMux(fn);
-            break;
+            return vsf.SaveWinSubMux(fn, delay);
         case Scenarist:
-            return vsf.SaveScenarist(fn);
-            break;
+            return vsf.SaveScenarist(fn, delay);
         case Maestro:
-            return vsf.SaveMaestro(fn);
-            break;
+            return vsf.SaveMaestro(fn, delay);
         default:
             break;
     }
@@ -432,7 +428,7 @@ bool CVobSubFile::ReadIdx(CString fn, int& ver)
             int i = str.Find(buff);
             if (i < 0 || _stscanf_s(&s[i + _tcslen(buff)], _T("%d"), &ver) != 1
                     || ver > VOBSUBIDXVER) {
-                AfxMessageBox(_T("Wrong file version!"));
+                TRACE(_T("[CVobSubFile::ReadIdx] Wrong file version!\n"));
                 fError = true;
                 continue;
             }
@@ -445,7 +441,7 @@ bool CVobSubFile::ReadIdx(CString fn, int& ver)
 
             int i = str.Find(buff);
             if (i >= 0) {
-                _stscanf_s(&s[i + _tcslen(buff)], _T("%d, %d (PTS: %d)"), &vobid, &cellid, &celltimestamp);
+                _stscanf_s(&s[i + _tcslen(buff)], _T("%d, %d (PTS: %I64d)"), &vobid, &cellid, &celltimestamp);
             }
 
             continue;
@@ -567,8 +563,7 @@ bool CVobSubFile::ReadIdx(CString fn, int& ver)
 
             TCHAR c;
             int hh, mm, ss, ms;
-            int n = _stscanf_s(str, _T("%d%c%d%c%d%c%d"), &hh, &c, sizeof(TCHAR),
-                               &mm, &c, sizeof(TCHAR), &ss, &c, sizeof(TCHAR), &ms);
+            int n = _stscanf_s(str, _T("%d%c%d%c%d%c%d"), &hh, &c, 1, &mm, &c, 1, &ss, &c, 1, &ms);
 
             m_toff = n == 1
                      ? hh * (fNegative ? -1 : 1)
@@ -673,8 +668,7 @@ bool CVobSubFile::ReadIdx(CString fn, int& ver)
 
             TCHAR c;
             int hh, mm, ss, ms;
-            if (_stscanf_s(str, _T("%d%c%d%c%d%c%d"), &hh, &c, sizeof(TCHAR),
-                           &mm, &c, sizeof(TCHAR), &ss, &c, sizeof(TCHAR), &ms) != 4 + 3) {
+            if (_stscanf_s(str, _T("%d%c%d%c%d%c%d"), &hh, &c, 1, &mm, &c, 1, &ss, &c, 1, &ms) != 4 + 3) {
                 fError = true;
                 continue;
             }
@@ -696,8 +690,7 @@ bool CVobSubFile::ReadIdx(CString fn, int& ver)
 
             TCHAR c;
             int hh, mm, ss, ms;
-            if (_stscanf_s(str, _T("%d%c%d%c%d%c%d"), &hh, &c, sizeof(TCHAR),
-                           &mm, &c, sizeof(TCHAR), &ss, &c, sizeof(TCHAR), &ms) != 4 + 3) {
+            if (_stscanf_s(str, _T("%d%c%d%c%d%c%d"), &hh, &c, 1, &mm, &c, 1, &ss, &c, 1, &ms) != 4 + 3) {
                 fError = true;
                 continue;
             }
@@ -716,7 +709,7 @@ bool CVobSubFile::ReadIdx(CString fn, int& ver)
                 continue;
             }
 
-            if (delay < 0 && m_langs[id].subpos.GetCount() > 0) {
+            if (delay < 0 && !m_langs[id].subpos.IsEmpty()) {
                 __int64 ts = m_langs[id].subpos[m_langs[id].subpos.GetCount() - 1].start;
 
                 if (sb.start < ts) {
@@ -753,23 +746,24 @@ bool CVobSubFile::ReadSub(CString fn)
     return true;
 }
 
-// Do we really need MyProcessDataProc??
-static unsigned char* RARbuff = NULL;
+static unsigned char* RARbuff = nullptr;
 static unsigned int RARpos = 0;
 
-static int PASCAL MyProcessDataProc(unsigned char* Addr, int Size)
+static int CALLBACK MyCallbackProc(UINT msg, LPARAM UserData, LPARAM P1, LPARAM P2)
 {
-    ASSERT(RARbuff);
+    if (msg == UCM_PROCESSDATA) {
+        ASSERT(RARbuff);
 
-    memcpy(&RARbuff[RARpos], Addr, Size);
-    RARpos += Size;
+        memcpy(&RARbuff[RARpos], (char*)P1, (size_t)P2);
+        RARpos += (unsigned int)P2;
+    }
 
     return 1;
 }
 
 bool CVobSubFile::ReadRar(CString fn)
 {
-#ifndef USE_UNRAR_STATIC
+#if !USE_STATIC_UNRAR
 #ifdef _WIN64
     HMODULE h = LoadLibrary(_T("unrar64.dll"));
 #else
@@ -779,63 +773,58 @@ bool CVobSubFile::ReadRar(CString fn)
         return false;
     }
 
-#endif /* USE_UNRAR_STATIC */
-
-#ifndef USE_UNRAR_STATIC
     RAROpenArchiveEx OpenArchiveEx = (RAROpenArchiveEx)GetProcAddress(h, "RAROpenArchiveEx");
     RARCloseArchive  CloseArchive  = (RARCloseArchive)GetProcAddress(h, "RARCloseArchive");
     RARReadHeaderEx  ReadHeaderEx  = (RARReadHeaderEx)GetProcAddress(h, "RARReadHeaderEx");
     RARProcessFile   ProcessFile   = (RARProcessFile)GetProcAddress(h, "RARProcessFile");
-    RARSetProcessDataProc SetProcessDataProc = (RARSetProcessDataProc)GetProcAddress(h, "RARSetProcessDataProc");
+    RARSetCallback   SetCallback   = (RARSetCallback)GetProcAddress(h, "RARSetCallback");
 
-    if (!(OpenArchiveEx && CloseArchive && ReadHeaderEx && ProcessFile && SetProcessDataProc)) {
+    if (!(OpenArchiveEx && CloseArchive && ReadHeaderEx && ProcessFile && SetCallback)) {
         FreeLibrary(h);
         return false;
     }
 
 #else
+
 #define OpenArchiveEx      RAROpenArchiveEx
 #define CloseArchive       RARCloseArchive
 #define ReadHeaderEx       RARReadHeaderEx
 #define ProcessFile        RARProcessFile
-#define SetProcessDataProc RARSetProcessDataProc
-#endif
-    // TODO: struct here is not needed
-    struct RAROpenArchiveDataEx ArchiveDataEx;
-    //RAROpenArchiveDataEx ArchiveDataEx = { 0 };
-    memset(&ArchiveDataEx, 0, sizeof(ArchiveDataEx));
-    // Are these filename conversions needed??
-    ArchiveDataEx.ArcNameW = (LPTSTR)(LPCTSTR)fn;
-    char fnA[_MAX_PATH];
+#define SetCallback        RARSetCallback
+#endif /* USE_STATIC_UNRAR */
+
+    RAROpenArchiveDataEx OpenArchiveData;
+    memset(&OpenArchiveData, 0, sizeof(OpenArchiveData));
+
+    OpenArchiveData.ArcNameW = (LPTSTR)(LPCTSTR)fn;
+    char fnA[MAX_PATH];
     size_t size;
     if (wcstombs_s(&size, fnA, fn, fn.GetLength())) {
         fnA[0] = 0;
     }
-    ArchiveDataEx.ArcName = fnA;
-    ArchiveDataEx.OpenMode = RAR_OM_EXTRACT;
-    ArchiveDataEx.CmtBuf = 0;
-    HANDLE hrar = OpenArchiveEx(&ArchiveDataEx);
-    if (!hrar) {
-#ifndef USE_UNRAR_STATIC
+    OpenArchiveData.ArcName = fnA;
+    OpenArchiveData.OpenMode = RAR_OM_EXTRACT;
+    OpenArchiveData.CmtBuf = 0;
+    OpenArchiveData.Callback = MyCallbackProc;
+    HANDLE hArcData = OpenArchiveEx(&OpenArchiveData);
+    if (!hArcData) {
+#if !USE_STATIC_UNRAR
         FreeLibrary(h);
 #endif
         return false;
     }
 
-    SetProcessDataProc(hrar, MyProcessDataProc);
+    RARHeaderDataEx HeaderDataEx;
+    HeaderDataEx.CmtBuf = nullptr;
 
-    // TODO: struct here is not needed
-    struct RARHeaderDataEx HeaderDataEx;
-    HeaderDataEx.CmtBuf = NULL;
-
-    while (ReadHeaderEx(hrar, &HeaderDataEx) == 0) {
+    while (ReadHeaderEx(hArcData, &HeaderDataEx) == 0) {
         CString subfn(HeaderDataEx.FileNameW);
 
         if (!subfn.Right(4).CompareNoCase(_T(".sub"))) {
             CAutoVectorPtr<BYTE> buff;
             if (!buff.Allocate(HeaderDataEx.UnpSize)) {
-                CloseArchive(hrar);
-#ifndef USE_UNRAR_STATIC
+                CloseArchive(hArcData);
+#if !USE_STATIC_UNRAR
                 FreeLibrary(h);
 #endif
                 return false;
@@ -844,9 +833,9 @@ bool CVobSubFile::ReadRar(CString fn)
             RARbuff = buff;
             RARpos = 0;
 
-            if (ProcessFile(hrar, RAR_TEST, NULL, NULL)) {
-                CloseArchive(hrar);
-#ifndef USE_UNRAR_STATIC
+            if (ProcessFile(hArcData, RAR_TEST, nullptr, nullptr)) {
+                CloseArchive(hArcData);
+#if !USE_STATIC_UNRAR
                 FreeLibrary(h);
 #endif
 
@@ -858,17 +847,17 @@ bool CVobSubFile::ReadRar(CString fn)
             m_sub.Write(buff, HeaderDataEx.UnpSize);
             m_sub.SeekToBegin();
 
-            RARbuff = NULL;
+            RARbuff = nullptr;
             RARpos = 0;
 
             break;
         }
 
-        ProcessFile(hrar, RAR_SKIP, NULL, NULL);
+        ProcessFile(hArcData, RAR_SKIP, nullptr, nullptr);
     }
 
-    CloseArchive(hrar);
-#ifndef USE_UNRAR_STATIC
+    CloseArchive(hArcData);
+#if !USE_STATIC_UNRAR
     FreeLibrary(h);
 #endif
 
@@ -916,7 +905,7 @@ bool CVobSubFile::ReadIfo(CString fn)
     return true;
 }
 
-bool CVobSubFile::WriteIdx(CString fn)
+bool CVobSubFile::WriteIdx(CString fn, int delay)
 {
     CTextFile f;
     if (!f.Save(fn, CTextFile::DEFAULT_ENCODING)) {
@@ -983,7 +972,7 @@ bool CVobSubFile::WriteIdx(CString fn)
 
     f.WriteString(_T("# For correcting non-progressive desync. (in millisecs or hh:mm:ss:ms)\n"));
     f.WriteString(_T("# Note: Not effective in DirectVobSub, use \"delay: ... \" instead.\n"));
-    str.Format(_T("time offset: %d\n\n"), m_toff);
+    str.Format(_T("time offset: %u\n\n"), m_toff);
     f.WriteString(str);
 
     f.WriteString(_T("# ON: displays only forced subtitles, OFF: shows everything\n"));
@@ -1026,6 +1015,16 @@ bool CVobSubFile::WriteIdx(CString fn)
     str.Format(_T("langidx: %d\n\n"), m_iLang);
     f.WriteString(str);
 
+    if (delay) {
+        str.Format(_T("delay: %s%02d:%02d:%02d:%03d\n\n"),
+                   delay < 0 ? _T("-") : _T(""),
+                   abs(delay / 1000 / 60 / 60) % 60,
+                   abs(delay / 1000 / 60) % 60,
+                   abs(delay / 1000) % 60,
+                   abs(delay % 1000));
+        f.WriteString(str);
+    }
+
     // Subs
 
     for (size_t i = 0; i < 32; i++) {
@@ -1043,7 +1042,7 @@ bool CVobSubFile::WriteIdx(CString fn)
         if (!sl.id) {
             sl.id = '--';
         }
-        str.Format(_T("id: %c%c, index: %d\n"), sl.id >> 8, sl.id & 0xff, i);
+        str.Format(_T("id: %c%c, index: %u\n"), sl.id >> 8, sl.id & 0xff, i);
         f.WriteString(str);
 
         str = _T("# Uncomment next line to activate alternative name in DirectVobSub / Windows Media Player 6.x\n");
@@ -1062,7 +1061,7 @@ bool CVobSubFile::WriteIdx(CString fn)
             }
 
             if (sp[j].vobid != vobid || sp[j].cellid != cellid) {
-                str.Format(_T("# Vob/Cell ID: %d, %d (PTS: %d)\n"), sp[j].vobid, sp[j].cellid, sp[j].celltimestamp);
+                str.Format(_T("# Vob/Cell ID: %d, %d (PTS: %I64d)\n"), sp[j].vobid, sp[j].cellid, sp[j].celltimestamp);
                 f.WriteString(str);
                 vobid = sp[j].vobid;
                 cellid = sp[j].cellid;
@@ -1110,7 +1109,7 @@ bool CVobSubFile::WriteSub(CString fn)
 
 BYTE* CVobSubFile::GetPacket(int idx, int& packetsize, int& datasize, int iLang)
 {
-    BYTE* ret = NULL;
+    BYTE* ret = nullptr;
 
     if (iLang < 0 || iLang >= 32) {
         iLang = m_iLang;
@@ -1165,7 +1164,7 @@ BYTE* CVobSubFile::GetPacket(int idx, int& packetsize, int& datasize, int iLang)
         }
 
         if (i != packetsize || sizeleft > 0) {
-            delete [] ret, ret = NULL;
+            delete [] ret, ret = nullptr;
         }
     } while (false);
 
@@ -1262,7 +1261,7 @@ int CVobSubFile::GetFrameIdxByTimeStamp(__int64 time)
 STDMETHODIMP CVobSubFile::NonDelegatingQueryInterface(REFIID riid, void** ppv)
 {
     CheckPointer(ppv, E_POINTER);
-    *ppv = NULL;
+    *ppv = nullptr;
 
     return
         QI(IPersist)
@@ -1282,12 +1281,12 @@ STDMETHODIMP_(POSITION) CVobSubFile::GetStartPosition(REFERENCE_TIME rt, double 
     int i = GetFrameIdxByTimeStamp(rt);
 
     if (!GetFrame(i)) {
-        return NULL;
+        return nullptr;
     }
 
     if (rt >= (m_img.start + m_img.delay)) {
         if (!GetFrame(++i)) {
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -1297,7 +1296,7 @@ STDMETHODIMP_(POSITION) CVobSubFile::GetStartPosition(REFERENCE_TIME rt, double 
 STDMETHODIMP_(POSITION) CVobSubFile::GetNext(POSITION pos)
 {
     int i = (int)pos;
-    return (GetFrame(i) ? (POSITION)(i + 1) : NULL);
+    return (GetFrame(i) ? (POSITION)(i + 1) : nullptr);
 }
 
 STDMETHODIMP_(REFERENCE_TIME) CVobSubFile::GetStart(POSITION pos, double fps)
@@ -1348,10 +1347,11 @@ STDMETHODIMP CVobSubFile::GetClassID(CLSID* pClassID)
 STDMETHODIMP_(int) CVobSubFile::GetStreamCount()
 {
     int iStreamCount = 0;
-    for (size_t i = 0; i < 32; i++)
+    for (size_t i = 0; i < 32; i++) {
         if (m_langs[i].subpos.GetCount()) {
             iStreamCount++;
         }
+    }
     return iStreamCount;
 }
 
@@ -1387,10 +1387,11 @@ STDMETHODIMP_(int) CVobSubFile::GetStream()
 {
     int iStream = 0;
 
-    for (ptrdiff_t i = 0; i < m_iLang; i++)
+    for (ptrdiff_t i = 0; i < m_iLang; i++) {
         if (!m_langs[i].subpos.IsEmpty()) {
             iStream++;
         }
+    }
 
     return iStream;
 }
@@ -1648,7 +1649,7 @@ HRESULT CVobSubSettings::Render(SubPicDesc& spd, RECT& bbox)
     GetDestrect(r, spd.w, spd.h);
     StretchBlt(spd, r, m_img);
     /*
-        CRenderedTextSubtitle rts(NULL);
+        CRenderedTextSubtitle rts(nullptr);
         rts.CreateDefaultStyle(DEFAULT_CHARSET);
         rts.m_dstScreenSize.SetSize(m_size.cx, m_size.cy);
         CStringW assstr;
@@ -1672,19 +1673,19 @@ static bool CompressFile(CString fn)
     if (h != INVALID_HANDLE_VALUE) {
         unsigned short us = COMPRESSION_FORMAT_DEFAULT;
         DWORD nBytesReturned;
-        b = DeviceIoControl(h, FSCTL_SET_COMPRESSION, (LPVOID)&us, 2, NULL, 0, (LPDWORD)&nBytesReturned, NULL);
+        b = DeviceIoControl(h, FSCTL_SET_COMPRESSION, (LPVOID)&us, 2, nullptr, 0, (LPDWORD)&nBytesReturned, nullptr);
         CloseHandle(h);
     }
 
     return !!b;
 }
 
-bool CVobSubFile::SaveVobSub(CString fn)
+bool CVobSubFile::SaveVobSub(CString fn, int delay)
 {
-    return WriteIdx(fn + _T(".idx")) && WriteSub(fn + _T(".sub"));
+    return WriteIdx(fn + _T(".idx"), delay) && WriteSub(fn + _T(".sub"));
 }
 
-bool CVobSubFile::SaveWinSubMux(CString fn)
+bool CVobSubFile::SaveWinSubMux(CString fn, int delay)
 {
     TrimExtension(fn);
 
@@ -1761,7 +1762,7 @@ bool CVobSubFile::SaveWinSubMux(CString fn)
             }
         }
 
-        int t1 = (int)m_img.start;
+        int t1 = (int)m_img.start + delay;
         int t2 = t1 + (int)m_img.delay /*+ (m_size.cy==480?(1000/29.97+1):(1000/25))*/;
 
         ASSERT(t2 > t1);
@@ -1774,7 +1775,7 @@ bool CVobSubFile::SaveWinSubMux(CString fn)
         }
 
         CString bmpfn;
-        bmpfn.Format(_T("%s_%06d.bmp"), fn, i + 1);
+        bmpfn.Format(_T("%s_%06u.bmp"), fn, i + 1);
 
         CString str;
         str.Format(_T("%s\t%02d:%02d:%02d:%02d %02d:%02d:%02d:%02d\t%03d %03d %03d %03d %d %d %d %d\n"),
@@ -1815,7 +1816,7 @@ bool CVobSubFile::SaveWinSubMux(CString fn)
     return true;
 }
 
-bool CVobSubFile::SaveScenarist(CString fn)
+bool CVobSubFile::SaveScenarist(CString fn, int delay)
 {
     TrimExtension(fn);
 
@@ -1829,8 +1830,8 @@ bool CVobSubFile::SaveScenarist(CString fn)
     fn.Replace('\\', '/');
     CString title = fn.Mid(fn.ReverseFind('/') + 1);
 
-    TCHAR buff[_MAX_PATH], * pFilePart = buff;
-    if (GetFullPathName(fn, _MAX_PATH, buff, &pFilePart) == 0) {
+    TCHAR buff[MAX_PATH], * pFilePart = buff;
+    if (GetFullPathName(fn, MAX_PATH, buff, &pFilePart) == 0) {
         return false;
     }
 
@@ -1967,7 +1968,7 @@ bool CVobSubFile::SaveScenarist(CString fn)
         }
 
         CString bmpfn;
-        bmpfn.Format(_T("%s_%04d.bmp"), fn, i + 1);
+        bmpfn.Format(_T("%s_%04u.bmp"), fn, i + 1);
         title = bmpfn.Mid(bmpfn.ReverseFind('/') + 1);
 
         // E1, E2, P, Bg
@@ -1990,11 +1991,11 @@ bool CVobSubFile::SaveScenarist(CString fn)
             f.WriteString(str);
         }
 
-        int t1 = (int)sp[i].start;
+        int t1 = (int)sp[i].start + delay;
         int h1 = t1 / 1000 / 60 / 60, m1 = (t1 / 1000 / 60) % 60, s1 = (t1 / 1000) % 60;
         int f1 = (int)((m_size.cy == 480 ? 29.97 : 25) * (t1 % 1000) / 1000);
 
-        int t2 = (int)sp[i].stop;
+        int t2 = (int)sp[i].stop + delay;
         int h2 = t2 / 1000 / 60 / 60, m2 = (t2 / 1000 / 60) % 60, s2 = (t2 / 1000) % 60;
         int f2 = (int)((m_size.cy == 480 ? 29.97 : 25) * (t2 % 1000) / 1000);
 
@@ -2022,7 +2023,7 @@ bool CVobSubFile::SaveScenarist(CString fn)
         }
 
         if (i + 1 < sp.GetCount()) {
-            int t3 = (int)sp[i + 1].start;
+            int t3 = (int)sp[i + 1].start + delay;
             int h3 = t3 / 1000 / 60 / 60, m3 = (t3 / 1000 / 60) % 60, s3 = (t3 / 1000) % 60;
             int f3 = (int)((m_size.cy == 480 ? 29.97 : 25) * (t3 % 1000) / 1000);
 
@@ -2049,7 +2050,7 @@ bool CVobSubFile::SaveScenarist(CString fn)
             continue;
         }
 
-        str.Format(_T("%04d\t%02d:%02d:%02d:%02d\t%02d:%02d:%02d:%02d\t%s\n"),
+        str.Format(_T("%04u\t%02d:%02d:%02d:%02d\t%02d:%02d:%02d:%02d\t%s\n"),
                    ++k,
                    h1, m1, s1, f1,
                    h2, m2, s2, f2,
@@ -2074,7 +2075,7 @@ bool CVobSubFile::SaveScenarist(CString fn)
     return true;
 }
 
-bool CVobSubFile::SaveMaestro(CString fn)
+bool CVobSubFile::SaveMaestro(CString fn, int delay)
 {
     TrimExtension(fn);
 
@@ -2088,8 +2089,8 @@ bool CVobSubFile::SaveMaestro(CString fn)
     fn.Replace('\\', '/');
     CString title = fn.Mid(fn.ReverseFind('/') + 1);
 
-    TCHAR buff[_MAX_PATH], * pFilePart = buff;
-    if (GetFullPathName(fn, _MAX_PATH, buff, &pFilePart) == 0) {
+    TCHAR buff[MAX_PATH], * pFilePart = buff;
+    if (GetFullPathName(fn, MAX_PATH, buff, &pFilePart) == 0) {
         return false;
     }
 
@@ -2197,7 +2198,7 @@ bool CVobSubFile::SaveMaestro(CString fn)
         }
 
         CString bmpfn;
-        bmpfn.Format(_T("%s_%04d.bmp"), fn, i + 1);
+        bmpfn.Format(_T("%s_%04u.bmp"), fn, i + 1);
         title = bmpfn.Mid(bmpfn.ReverseFind('/') + 1);
 
         // E1, E2, P, Bg
@@ -2218,11 +2219,11 @@ bool CVobSubFile::SaveMaestro(CString fn)
             f.WriteString(str);
         }
 
-        int t1 = (int)sp[i].start;
+        int t1 = (int)sp[i].start + delay;
         int h1 = t1 / 1000 / 60 / 60, m1 = (t1 / 1000 / 60) % 60, s1 = (t1 / 1000) % 60;
         int f1 = (int)((m_size.cy == 480 ? 29.97 : 25) * (t1 % 1000) / 1000);
 
-        int t2 = (int)sp[i].stop;
+        int t2 = (int)sp[i].stop + delay;
         int h2 = t2 / 1000 / 60 / 60, m2 = (t2 / 1000 / 60) % 60, s2 = (t2 / 1000) % 60;
         int f2 = (int)((m_size.cy == 480 ? 29.97 : 25) * (t2 % 1000) / 1000);
 
@@ -2250,7 +2251,7 @@ bool CVobSubFile::SaveMaestro(CString fn)
         }
 
         if (i < sp.GetCount() - 1) {
-            int t3 = (int)sp[i + 1].start;
+            int t3 = (int)sp[i + 1].start + delay;
             int h3 = t3 / 1000 / 60 / 60, m3 = (t3 / 1000 / 60) % 60, s3 = (t3 / 1000) % 60;
             int f3 = (int)((m_size.cy == 480 ? 29.97 : 25) * (t3 % 1000) / 1000);
 
@@ -2277,7 +2278,7 @@ bool CVobSubFile::SaveMaestro(CString fn)
             continue;
         }
 
-        str.Format(_T("%04d\t%02d:%02d:%02d:%02d\t%02d:%02d:%02d:%02d\t%s\n"),
+        str.Format(_T("%04u\t%02d:%02d:%02d:%02d\t%02d:%02d:%02d:%02d\t%s\n"),
                    ++k,
                    h1, m1, s1, f1,
                    h2, m2, s2, f2,
@@ -2359,13 +2360,13 @@ void CVobSubStream::Open(CString name, BYTE* pData, int len)
         } else if (key == _T("fade in/out")) {
             _stscanf_s(value, _T("%d%, %d%"), &m_fadein, &m_fadeout);
         } else if (key == _T("time offset")) {
-            m_toff = _tcstol(value, NULL, 10);
+            m_toff = _tcstol(value, nullptr, 10);
         } else if (key == _T("forced subs")) {
             m_fOnlyShowForcedSubs = value == _T("1") || value == _T("ON");
         } else if (key == _T("palette")) {
             Explode(value, sl, ',', 16);
             for (size_t i = 0; i < 16 && sl.GetCount(); i++) {
-                *(DWORD*)&m_orgpal[i] = _tcstol(sl.RemoveHead(), NULL, 16);
+                *(DWORD*)&m_orgpal[i] = _tcstol(sl.RemoveHead(), nullptr, 16);
             }
         } else if (key == _T("custom colors")) {
             m_fCustomPal = Explode(value, sl, ',', 3) == _T("ON");
@@ -2375,8 +2376,7 @@ void CVobSubStream::Open(CString name, BYTE* pData, int len)
                 Explode(sl.RemoveHead(), tridx, ':', 2);
                 if (tridx.RemoveHead() == _T("tridx")) {
                     TCHAR tr[4];
-                    _stscanf_s(tridx.RemoveHead(), _T("%c%c%c%c"), &tr[0], sizeof(TCHAR),
-                               &tr[1], sizeof(TCHAR), &tr[2], sizeof(TCHAR), &tr[3], sizeof(TCHAR));
+                    _stscanf_s(tridx.RemoveHead(), _T("%c%c%c%c"), &tr[0], 1, &tr[1], 1, &tr[2], 1, &tr[3], 1);
                     for (size_t i = 0; i < 4; i++) {
                         m_tridx |= ((tr[i] == '1') ? 1 : 0) << i;
                     }
@@ -2385,7 +2385,7 @@ void CVobSubStream::Open(CString name, BYTE* pData, int len)
                 if (colors.RemoveHead() == _T("colors")) {
                     Explode(colors.RemoveHead(), colors, ',', 4);
                     for (size_t i = 0; i < 4 && colors.GetCount(); i++) {
-                        *(DWORD*)&m_cuspal[i] = _tcstol(colors.RemoveHead(), NULL, 16);
+                        *(DWORD*)&m_cuspal[i] = _tcstol(colors.RemoveHead(), nullptr, 16);
                     }
                 }
             }
@@ -2413,6 +2413,16 @@ void CVobSubStream::Add(REFERENCE_TIME tStart, REFERENCE_TIME tStop, BYTE* pData
         m_subpics.RemoveTail();
         m_img.iIdx = -1;
     }
+
+    // We can only render one subpicture at a time, thus if there is overlap
+    // we have to fix it. tStop = tStart seems to work.
+    if (m_subpics.GetCount() && m_subpics.GetTail()->tStop > p->tStart) {
+        TRACE(_T("[CVobSubStream::Add] Vobsub timestamp overlap detected! ")
+              _T("Subpicture #%d, StopTime %I64d > %I64d (Next StartTime), making them equal!\n"),
+              m_subpics.GetCount(), m_subpics.GetTail()->tStop, p->tStart);
+        m_subpics.GetTail()->tStop = p->tStart;
+    }
+
     m_subpics.AddTail(p);
 }
 
@@ -2426,7 +2436,7 @@ void CVobSubStream::RemoveAll()
 STDMETHODIMP CVobSubStream::NonDelegatingQueryInterface(REFIID riid, void** ppv)
 {
     CheckPointer(ppv, E_POINTER);
-    *ppv = NULL;
+    *ppv = nullptr;
 
     return
         QI(IPersist)

@@ -1,20 +1,9 @@
-// File_Mpeg_Descriptors - Info for MPEG files
-// Copyright (C) 2007-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
 // Information about MPEG files, Descriptors
@@ -60,6 +49,8 @@ struct complete_stream
         {
             bool HasChanged;
             std::map<std::string, Ztring> Infos;
+            std::map<std::string, Ztring> ExtraInfos_Content;
+            std::map<std::string, Ztring> ExtraInfos_Option;
             std::map<Ztring, Ztring> EPGs;
             std::vector<int16u> elementary_PIDs;
             size_t StreamPos; //Stream_Menu
@@ -234,6 +225,7 @@ struct complete_stream
         typedef std::vector<table_id*>              table_ids;
         table_ids                                   Table_IDs; //Key is table_id
         std::map<std::string, Ztring>               Infos;
+        std::map<std::string, Ztring>               Infos_Option;
         std::map<int8u, Ztring>                     Languages; //Key is caption_service_number or 128+line21_field
         struct teletext
         {
@@ -513,7 +505,7 @@ struct complete_stream
         while (Duplicates_Temp!=Duplicates.end())
         {
             delete Duplicates_Temp->second; //Duplicates_Temp->second=NULL
-            Duplicates_Temp++;
+            ++Duplicates_Temp;
         }
     }
 };
@@ -606,6 +598,18 @@ private :
     void Descriptor_2D() {Skip_XX(Element_Size, "Data");};
     void Descriptor_2E() {Skip_XX(Element_Size, "Data");};
     void Descriptor_2F();
+    void Descriptor_30() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_31() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_32() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_33() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_34() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_35() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_36() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_37() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_38() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_39() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_3A() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_3F() {Skip_XX(Element_Size, "Data");};
     void Descriptor_40();
     void Descriptor_41();
     void Descriptor_42() {Skip_XX(Element_Size, "Data");};
@@ -682,6 +686,11 @@ private :
     void Descriptor_A9() {Skip_XX(Element_Size, "Data");};
     void Descriptor_AA();
     void Descriptor_AB() {Skip_XX(Element_Size, "Data");};
+    void Descriptor_C1();
+    void Descriptor_C8();
+    void Descriptor_DE();
+    void Descriptor_FC();
+    void Descriptor_FD();
 
     //SCTE 35
     void CUEI_00();

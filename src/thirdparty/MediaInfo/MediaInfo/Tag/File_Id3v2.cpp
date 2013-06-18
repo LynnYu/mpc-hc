@@ -1,21 +1,8 @@
-// File_Id3 - Info for ID3v2 tagged files
-// Copyright (C) 2005-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // Pre-compilation
@@ -1067,6 +1054,12 @@ void File_Id3v2::TXXX()
 //---------------------------------------------------------------------------
 void File_Id3v2::SYLT()
 {
+    if (Element_Size<6)
+    {
+        Skip_XX(Element_Size,                                   "(Problem)");
+        return;
+    }
+
     int8u Encoding;
     Get_B1 (Encoding,                                           "Text encoding");
     Skip_C3(                                                    "Language");

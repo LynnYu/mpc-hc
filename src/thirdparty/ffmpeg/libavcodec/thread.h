@@ -89,7 +89,7 @@ void ff_thread_await_progress(AVFrame *f, int progress, int field);
 
 /**
  * Wrapper around get_buffer() for frame-multithreaded codecs.
- * Call this function instead of avctx->get_buffer(f).
+ * Call this function instead of ff_get_buffer(f).
  * Cannot be called after the codec has called ff_thread_finish_setup().
  *
  * @param avctx The current context.
@@ -112,6 +112,13 @@ void ff_thread_release_buffer(AVCodecContext *avctx, AVFrame *f);
 
 int ff_thread_init(AVCodecContext *s);
 void ff_thread_free(AVCodecContext *s);
+
+// ==> Start patch MPC
+/**
+ *  Default lock manager for pthread system
+ */
+int ff_pthread_lockmgr_cb(void **mutex, enum AVLockOp op);
+// ==> End patch MPC
 
 // ffdshow custom code. return pointer to the copied AVCodecContext for thread 0.
 AVCodecContext* get_thread0_avctx(AVCodecContext *avctx);

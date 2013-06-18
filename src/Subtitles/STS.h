@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -44,9 +44,9 @@ public:
     double   fontScaleX, fontScaleY; // percent
     double   fontSpacing;    // +/- pixels
     LONG     fontWeight;
-    BYTE     fItalic;
-    BYTE     fUnderline;
-    BYTE     fStrikeOut;
+    int      fItalic;
+    int      fUnderline;
+    int      fStrikeOut;
     int      fBlur;
     double   fGaussianBlur;
     double   fontAngleZ, fontAngleX, fontAngleY;
@@ -57,8 +57,11 @@ public:
 
     void SetDefault();
 
-    bool operator == (STSStyle& s);
-    bool IsFontStyleEqual(STSStyle& s);
+    bool operator == (const STSStyle& s) const;
+    bool operator != (const STSStyle& s) const {
+        return !(*this == s);
+    };
+    bool IsFontStyleEqual(const STSStyle& s) const;
 
     STSStyle& operator = (LOGFONT& lf);
 
@@ -69,7 +72,7 @@ public:
     friend STSStyle& operator <<= (STSStyle& s, CString& style);
 };
 
-class CSTSStyleMap : public CAtlMap<CString, STSStyle*, CStringElementTraits<CString> >
+class CSTSStyleMap : public CAtlMap<CString, STSStyle*, CStringElementTraits<CString>>
 {
 public:
     CSTSStyleMap() {}
@@ -161,7 +164,7 @@ public:
     bool Open(CString fn, int CharSet, CString name = _T(""));
     bool Open(CTextFile* f, int CharSet, CString name);
     bool Open(BYTE* data, int len, int CharSet, CString name);
-    bool SaveAs(CString fn, exttype et, double fps = -1, CTextFile::enc = CTextFile::DEFAULT_ENCODING);
+    bool SaveAs(CString fn, exttype et, double fps = -1, int delay = 0, CTextFile::enc = CTextFile::DEFAULT_ENCODING);
 
     void Add(CStringW str, bool fUnicode, int start, int end, CString style = _T("Default"), CString actor = _T(""), CString effect = _T(""), CRect marginRect = CRect(0, 0, 0, 0), int layer = 0, int readorder = -1);
     STSStyle* CreateDefaultStyle(int CharSet);
@@ -196,8 +199,6 @@ public:
     CStringW GetStrW(int i, bool fSSA = false);
     CStringW GetStrWA(int i, bool fSSA = false);
 
-#define GetStr GetStrW
-
     void SetStr(int i, CStringA str, bool fUnicode /* ignored */);
     void SetStr(int i, CStringW str, bool fUnicode);
 };
@@ -206,7 +207,7 @@ extern BYTE CharSetList[];
 extern TCHAR* CharSetNames[];
 extern int CharSetLen;
 
-class CHtmlColorMap : public CAtlMap<CString, DWORD, CStringElementTraits<CString> >
+class CHtmlColorMap : public CAtlMap<CString, DWORD, CStringElementTraits<CString>>
 {
 public:
     CHtmlColorMap();

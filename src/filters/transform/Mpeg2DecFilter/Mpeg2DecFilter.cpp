@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -62,8 +62,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-    {L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, _countof(sudPinTypesIn), sudPinTypesIn},
-    {L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, _countof(sudPinTypesOut), sudPinTypesOut}
+    {L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, _countof(sudPinTypesIn), sudPinTypesIn},
+    {L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, _countof(sudPinTypesOut), sudPinTypesOut}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -71,8 +71,8 @@ const AMOVIESETUP_FILTER sudFilter[] = {
 };
 
 CFactoryTemplate g_Templates[] = {
-    {sudFilter[0].strName, sudFilter[0].clsID, CreateInstance<CMpeg2DecFilter>, NULL, &sudFilter[0]},
-    {L"CMpeg2DecPropertyPage", &__uuidof(CMpeg2DecSettingsWnd), CreateInstance<CInternalPropertyPageTempl<CMpeg2DecSettingsWnd> >},
+    {sudFilter[0].strName, sudFilter[0].clsID, CreateInstance<CMpeg2DecFilter>, nullptr, &sudFilter[0]},
+    {L"CMpeg2DecPropertyPage", &__uuidof(CMpeg2DecSettingsWnd), CreateInstance<CInternalPropertyPageTempl<CMpeg2DecSettingsWnd>>},
 };
 
 int g_cTemplates = _countof(g_Templates);
@@ -122,11 +122,11 @@ LONG WINAPI Mine_ChangeDisplaySettingsEx(LONG ret, DWORD dwFlags, LPVOID lParam)
                 && (vp->dwFlags & VP_FLAGS_COPYPROTECT)) {
             if (vp->dwCommand == VP_COMMAND_GET) {
                 if ((vp->dwTVStandard & VP_TV_STANDARD_WIN_VGA) && vp->dwTVStandard != VP_TV_STANDARD_WIN_VGA) {
-                    TRACE(_T("Ooops, tv-out enabled? macrovision checks suck..."));
+                    TRACE(_T("Ooops, tv-out enabled? macrovision checks suck...\n"));
                     vp->dwTVStandard = VP_TV_STANDARD_WIN_VGA;
                 }
             } else if (vp->dwCommand == VP_COMMAND_SET) {
-                TRACE(_T("Ooops, as I already told ya, no need for any macrovision bs here"));
+                TRACE(_T("Ooops, as I already told ya, no need for any macrovision bs here\n"));
                 return 0;
             }
         }
@@ -359,7 +359,7 @@ CBasePin* CMpeg2DecFilter::GetPin(int n)
         case 3:
             return m_pClosedCaptionOutput;
     }
-    return NULL;
+    return nullptr;
 }
 
 HRESULT CMpeg2DecFilter::EndOfStream()
@@ -403,7 +403,7 @@ void CMpeg2DecFilter::InputTypeChanged()
 
     const CMediaType& mt = m_pInput->CurrentMediaType();
 
-    BYTE* pSequenceHeader = NULL;
+    BYTE* pSequenceHeader = nullptr;
     DWORD cbSequenceHeader = 0;
 
     if (mt.formattype == FORMAT_MPEGVideo) {
@@ -516,7 +516,7 @@ HRESULT CMpeg2DecFilter::Transform(IMediaSample* pIn)
 {
     HRESULT hr;
 
-    BYTE* pDataIn = NULL;
+    BYTE* pDataIn = nullptr;
     if (FAILED(hr = pIn->GetPointer(&pDataIn))) {
         return hr;
     }
@@ -638,9 +638,10 @@ void CMpeg2DecFilter::UpdateAspectRatio()
         m_par.cy = m_dec->m_info.m_sequence->pixel_height;
         CSize dar(m_dec->m_info.m_sequence->picture_width * m_par.cx,
                   m_dec->m_info.m_sequence->picture_height * m_par.cy);
-        int lnko = LNKO(dar.cx, dar.cy);
-        if (lnko > 1) {
-            dar.cx /= lnko, dar.cy /= lnko;
+        int gcd = GCD(dar.cx, dar.cy);
+        if (gcd > 1) {
+            dar.cx /= gcd;
+            dar.cy /= gcd;
         }
         SetAspect(dar);
     }
@@ -684,7 +685,7 @@ HRESULT CMpeg2DecFilter::DeliverFast()
     }
 
     CComPtr<IMediaSample> pOut;
-    BYTE* pDataOut = NULL;
+    BYTE* pDataOut = nullptr;
     if (FAILED(hr = GetDeliveryBuffer(m_fb.w, m_fb.h, &pOut))
             || FAILED(hr = pOut->GetPointer(&pDataOut))) {
         return hr;
@@ -744,7 +745,7 @@ HRESULT CMpeg2DecFilter::DeliverFast()
     rtStop = m_rate.StartTime + (rtStop - m_rate.StartTime) * m_rate.Rate / 10000;
 
     pOut->SetTime(&rtStart, &rtStop);
-    pOut->SetMediaTime(NULL, NULL);
+    pOut->SetMediaTime(nullptr, nullptr);
 
     //
 
@@ -865,7 +866,7 @@ HRESULT CMpeg2DecFilter::Deliver(bool fRepeatLast)
     HRESULT hr;
 
     CComPtr<IMediaSample> pOut;
-    BYTE* pDataOut = NULL;
+    BYTE* pDataOut = nullptr;
     if (FAILED(hr = GetDeliveryBuffer(m_fb.w, m_fb.h, &pOut))
             || FAILED(hr = pOut->GetPointer(&pDataOut))) {
         return hr;
@@ -909,7 +910,7 @@ HRESULT CMpeg2DecFilter::Deliver(bool fRepeatLast)
     rtStop = m_rate.StartTime + (rtStop - m_rate.StartTime) * m_rate.Rate / 10000;
 
     pOut->SetTime(&rtStart, &rtStop);
-    pOut->SetMediaTime(NULL, NULL);
+    pOut->SetMediaTime(nullptr, nullptr);
 
     //
 
@@ -939,7 +940,7 @@ HRESULT CMpeg2DecFilter::CheckConnect(PIN_DIRECTION dir, IPin* pPin)
                     /*&& clsid != CLSID_OverlayMixer2*/
                     && clsid != CLSID_VideoMixingRenderer
                     && clsid != CLSID_VideoMixingRenderer9
-                    && clsid != GUIDFromCString(_T("{FA10746C-9B63-4b6c-BC49-FC300EA5F256}")) // EVR
+                    && clsid != CLSID_EnhancedVideoRenderer
                     && clsid != GUIDFromCString(_T("{04FE9017-F873-410E-871E-AB91661A4EF7}")) // ffdshow
                     && (clsid != GUIDFromCString(_T("{93A22E7A-5091-45ef-BA61-6DA26156A5D0}")) || ver < 0x0234) // dvobsub
                     && (clsid != GUIDFromCString(_T("{9852A670-F845-491b-9BE6-EBD841B8A613}")) || ver < 0x0234) // dvobsub auto
@@ -1020,6 +1021,24 @@ HRESULT CMpeg2DecFilter::CheckTransform(const CMediaType* mtIn, const CMediaType
            : VFW_E_TYPE_NOT_ACCEPTED;
 }
 
+HRESULT CMpeg2DecFilter::SetMediaType(PIN_DIRECTION dir, const CMediaType* pmt)
+{
+    HRESULT hr = __super::SetMediaType(dir, pmt);
+
+    if (dir == PINDIR_INPUT) {
+        // Compute the expected Pixel AR
+        m_par.cx = m_arx * m_h;
+        m_par.cy = m_ary * m_w;
+        int gcd = GCD(m_par.cx, m_par.cy);
+        if (gcd > 1) {
+            m_par.cx /= gcd;
+            m_par.cy /= gcd;
+        }
+    }
+
+    return hr;
+}
+
 DWORD g_clock;
 
 HRESULT CMpeg2DecFilter::StartStreaming()
@@ -1075,7 +1094,7 @@ STDMETHODIMP CMpeg2DecFilter::GetPages(CAUUID* pPages)
 
     pPages->cElems = 1;
     pPages->pElems = (GUID*)CoTaskMemAlloc(sizeof(GUID) * pPages->cElems);
-    if (pPages->pElems != NULL) {
+    if (pPages->pElems != nullptr) {
         pPages->pElems[0] = __uuidof(CMpeg2DecSettingsWnd);
     } else {
         hr = E_OUTOFMEMORY;
@@ -1088,14 +1107,14 @@ STDMETHODIMP CMpeg2DecFilter::CreatePage(const GUID& guid, IPropertyPage** ppPag
 {
     CheckPointer(ppPage, E_POINTER);
 
-    if (*ppPage != NULL) {
+    if (*ppPage != nullptr) {
         return E_INVALIDARG;
     }
 
     HRESULT hr;
 
     if (guid == __uuidof(CMpeg2DecSettingsWnd)) {
-        (*ppPage = DEBUG_NEW CInternalPropertyPageTempl<CMpeg2DecSettingsWnd>(NULL, &hr))->AddRef();
+        (*ppPage = DEBUG_NEW CInternalPropertyPageTempl<CMpeg2DecSettingsWnd>(nullptr, &hr))->AddRef();
     }
 
     return *ppPage ? S_OK : E_FAIL;
@@ -1675,7 +1694,7 @@ HRESULT CSubpicInputPin::Transform(IMediaSample* pSample)
         DeleteMediaType(pmt);
     }
 
-    BYTE* pDataIn = NULL;
+    BYTE* pDataIn = nullptr;
     if (FAILED(hr = pSample->GetPointer(&pDataIn))) {
         return hr;
     }
@@ -2274,7 +2293,7 @@ bool CSubpicInputPin::svcdspu::Parse()
 
     bool duration = !!(*p++ & 0x04);
 
-    *p++; // unknown
+    p++; // unknown
 
     if (duration) {
         m_rtStop = m_rtStart + 10000i64 * ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) / 90;
@@ -2407,8 +2426,8 @@ HRESULT CClosedCaptionOutputPin::Deliver(const void* ptr, int len)
 
     if (len > 4 && ptr && *(DWORD*)ptr == 0xf8014343 && IsConnected()) {
         CComPtr<IMediaSample> pSample;
-        GetDeliveryBuffer(&pSample, NULL, NULL, 0);
-        BYTE* pData = NULL;
+        GetDeliveryBuffer(&pSample, nullptr, nullptr, 0);
+        BYTE* pData = nullptr;
         pSample->GetPointer(&pData);
         *(DWORD*)pData = 0xb2010000;
         memcpy(pData + 4, ptr, len);

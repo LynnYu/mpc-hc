@@ -1,20 +1,9 @@
-// File_Gxf - Info for GXF (SMPTE 360M) files
-// Copyright (C) 2010-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
 // Information about GXF files
@@ -85,7 +74,17 @@ private :
     int32u Material_Fields_FieldsPerFrame;
     int8u  Parsers_Count;
     int8u  AncillaryData_StreamID;
-    std::map<int8u, int64u> TimeCodes; //Key is StreamID
+    struct tc
+    {
+        int64u Milliseconds;
+        string String;
+
+        tc()
+        {
+            Milliseconds=(int64u)-1;
+        }
+    };
+    std::map<int8u, tc> TimeCodes; //Key is StreamID
     bool   Material_Fields_First_IsValid;
     bool   Material_Fields_Last_IsValid;
     bool   Material_File_Size_IsValid;
@@ -93,7 +92,7 @@ private :
     //Temp - Stream
     struct stream
     {
-        File__Analyze* Parser;
+        std::vector<File__Analyze*> Parsers;
         int64u FirstFrameDuration; //In case of audio, indicates the duration of the first frame
         stream_t StreamKind;
         size_t StreamPos;
@@ -114,7 +113,6 @@ private :
 
         stream()
         {
-            Parser=NULL;
             FirstFrameDuration=0;
             StreamKind=Stream_Max;
             StreamPos=(size_t)-1;
@@ -131,7 +129,8 @@ private :
         }
         ~stream()
         {
-            delete Parser; //Parser=NULL
+            for (size_t Pos=0; Pos<Parsers.size(); Pos++)
+                delete Parsers[Pos];
         }
     };
     std::vector<stream> Streams;

@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2009-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -26,7 +26,7 @@
 #include "PPageFileMediaInfo.h"
 #include "WinAPIUtils.h"
 
-#ifdef USE_MEDIAINFO_STATIC
+#if USE_STATIC_MEDIAINFO
 #include "MediaInfo/MediaInfo.h"
 using namespace MediaInfoLib;
 #else
@@ -42,14 +42,14 @@ CPPageFileMediaInfo::CPPageFileMediaInfo(CString fn, IFilterGraph* pFG)
     : CPropertyPage(CPPageFileMediaInfo::IDD, CPPageFileMediaInfo::IDD)
     , m_fn(fn)
     , m_pFG(pFG)
-    , m_pCFont(NULL)
+    , m_pCFont(nullptr)
 {
 }
 
 CPPageFileMediaInfo::~CPPageFileMediaInfo()
 {
     delete m_pCFont;
-    m_pCFont = NULL;
+    m_pCFont = nullptr;
 }
 
 void CPPageFileMediaInfo::DoDataExchange(CDataExchange* pDX)
@@ -91,11 +91,11 @@ BOOL CPPageFileMediaInfo::OnInitDialog()
         return TRUE;
     }
 
-    if (m_fn == _T("")) {
+    if (m_fn.IsEmpty()) {
         BeginEnumFilters(m_pFG, pEF, pBF) {
             CComQIPtr<IFileSourceFilter> pFSF = pBF;
             if (pFSF) {
-                LPOLESTR pFN = NULL;
+                LPOLESTR pFN = nullptr;
                 AM_MEDIA_TYPE mt;
                 if (SUCCEEDED(pFSF->GetCurFile(&pFN, &mt)) && pFN && *pFN) {
                     m_fn = CStringW(pFN);
@@ -107,7 +107,7 @@ BOOL CPPageFileMediaInfo::OnInitDialog()
         EndEnumFilters;
     }
 
-#ifdef USE_MEDIAINFO_STATIC
+#if USE_STATIC_MEDIAINFO
     MediaInfoLib::String f_name = m_fn;
     MediaInfoLib::MediaInfo MI;
 #else
@@ -115,6 +115,7 @@ BOOL CPPageFileMediaInfo::OnInitDialog()
     MediaInfo MI;
 #endif
 
+    MI.Option(_T("ParseSpeed"), _T("0"));
     MI.Open(f_name);
     MI.Option(_T("Complete"));
     MI.Option(_T("Language"), _T("  Config_Text_ColumnSize;30"));
@@ -159,7 +160,7 @@ void CPPageFileMediaInfo::OnShowWindow(BOOL bShow, UINT nStatus)
     }
 }
 
-#ifndef USE_MEDIAINFO_STATIC
+#if !USE_STATIC_MEDIAINFO
 bool CPPageFileMediaInfo::HasMediaInfo()
 {
     MediaInfo MI;

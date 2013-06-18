@@ -1,4 +1,4 @@
-# (C) 2007-2012 see Authors.txt
+# (C) 2007-2013 see Authors.txt
 #
 # This file is part of MPC-HC.
 #
@@ -16,14 +16,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 CC = gcc.exe
-BIN_DIR  = ../../../bin
-ZLIB_DIR = ../zlib
 
-ifeq ($(64BIT),yes)
-    MY_ARCH = x64
+ifeq ($(VS2012),yes)
+    BIN_DIR  = ../../../bin12
 else
-    MY_ARCH = Win32
+    BIN_DIR  = ../../../bin
 endif
+ZLIB_DIR = ../zlib
 
 ifeq ($(DEBUG),yes)
     OUT_DIR_PREFIX = Debug
@@ -31,15 +30,22 @@ else
     OUT_DIR_PREFIX = Release
 endif
 
+ifeq ($(64BIT),yes)
+    MY_ARCH = x64
+else
+    MY_ARCH = Win32
+endif
+
+
 OBJ_DIR     = $(BIN_DIR)/obj/$(OUT_DIR_PREFIX)_$(MY_ARCH)/ffmpeg/
 OUT_LIB_DIR = $(BIN_DIR)/lib/$(OUT_DIR_PREFIX)_$(MY_ARCH)
 OUT_LIB     = $(OUT_LIB_DIR)/ffmpeg.lib
 
 
 # Compiler and yasm flags
-CFLAGS    = -I. -I.. -Ilibavcodec -Ilibavutil -I$(ZLIB_DIR) -DHAVE_AV_CONFIG_H \
-            -D_ISOC99_SOURCE -D_XOPEN_SOURCE=600 -D_LARGEFILE_SOURCE \
-            -D_FILE_OFFSET_BITS=64 -std=gnu99 -pipe -mthreads
+CFLAGS    = -I. -I.. -I$(ZLIB_DIR) -DHAVE_AV_CONFIG_H -D_ISOC99_SOURCE \
+            -D_XOPEN_SOURCE=600 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
+            -std=gnu99 -pipe -mthreads
 OPTFLAGS  = -O2 -fno-common -fno-tree-vectorize -fomit-frame-pointer
 YASMFLAGS = -I. -Pconfig.asm
 
@@ -64,7 +70,7 @@ endif
 
 
 # Object directories
-OBJ_DIRS = $(OBJ_DIR) \
+OBJ_DIRS = \
     $(OBJ_DIR)libavcodec \
     $(OBJ_DIR)libavcodec/x86 \
     $(OBJ_DIR)libavresample \
@@ -73,20 +79,21 @@ OBJ_DIRS = $(OBJ_DIR) \
     $(OBJ_DIR)libavutil/x86 \
     $(OBJ_DIR)libswscale \
     $(OBJ_DIR)libswscale/x86 \
-    $(OUT_LIB_DIR)
-
 
 # Targets
-all: make_objdirs $(OUT_LIB)
+all: create_dirs $(OUT_LIB)
 
-make_objdirs: $(OBJ_DIRS)
-$(OBJ_DIRS):
+create_dirs: $(OBJ_DIRS) $(OUT_LIB_DIR)
+$(OBJ_DIRS) $(OUT_LIB_DIR):
 	$(shell test -d $(@) || mkdir -p $(@))
 
 clean:
 	@echo Cleaning ffmpeg...
-	rm -f $(OUT_LIB)
-	rm -rf $(OBJ_DIR)
+	rm -f \
+      $(OUT_LIB) \
+      $(OBJ_DIR)mpc_helper.o \
+      $(OBJ_DIR)mpc_helper.d
+	rm -rf $(OBJ_DIRS)
 
 
 # Objects
@@ -112,6 +119,7 @@ SRCS_C = \
     libavcodec/adpcm.c \
     libavcodec/adpcm_data.c \
     libavcodec/alac.c \
+    libavcodec/alac_data.c \
     libavcodec/allcodecs.c \
     libavcodec/alsdec.c \
     libavcodec/amrnbdec.c \
@@ -120,6 +128,7 @@ SRCS_C = \
     libavcodec/atrac3.c \
     libavcodec/avfft.c \
     libavcodec/avpacket.c \
+    libavcodec/avpicture.c \
     libavcodec/bgmc.c \
     libavcodec/bitstream.c \
     libavcodec/cabac.c \
@@ -161,9 +170,11 @@ SRCS_C = \
     libavcodec/h264_ps.c \
     libavcodec/h264_refs.c \
     libavcodec/h264_sei.c \
+    libavcodec/h264chroma.c \
     libavcodec/h264dsp.c \
     libavcodec/h264idct.c \
     libavcodec/h264pred.c \
+    libavcodec/h264qpel.c \
     libavcodec/huffman.c \
     libavcodec/imgconvert.c \
     libavcodec/indeo3.c \
@@ -246,9 +257,12 @@ SRCS_C = \
     libavcodec/vc1data.c \
     libavcodec/vc1dec.c \
     libavcodec/vc1dsp.c \
+    libavcodec/videodsp.c \
+    libavcodec/vmnc.c \
     libavcodec/vorbis.c \
     libavcodec/vorbis_data.c \
     libavcodec/vorbisdec.c \
+    libavcodec/vorbisdsp.c \
     libavcodec/vp3.c \
     libavcodec/vp3dsp.c \
     libavcodec/vp5.c \
@@ -262,6 +276,7 @@ SRCS_C = \
     libavcodec/vp8dsp.c \
     libavcodec/wmv2.c \
     libavcodec/wmv2dec.c \
+    libavcodec/wmv2dsp.c \
     libavcodec/xiph.c \
     libavcodec/x86/ac3dsp_init.c \
     libavcodec/x86/dsputil_mmx.c \
@@ -269,6 +284,8 @@ SRCS_C = \
     libavcodec/x86/fft_init.c \
     libavcodec/x86/fmtconvert_init.c \
     libavcodec/x86/h264_intrapred_init.c \
+    libavcodec/x86/h264_qpel.c \
+    libavcodec/x86/h264chroma_init.c \
     libavcodec/x86/h264dsp_init.c \
     libavcodec/x86/idct_mmx.c \
     libavcodec/x86/idct_mmx_xvid.c \
@@ -283,6 +300,8 @@ SRCS_C = \
     libavcodec/x86/simple_idct.c \
     libavcodec/x86/vc1dsp_init.c \
     libavcodec/x86/vc1dsp_mmx.c \
+    libavcodec/x86/videodsp_init.c \
+    libavcodec/x86/vorbisdsp_init.c \
     libavcodec/x86/vp3dsp_init.c \
     libavcodec/x86/vp56dsp_init.c \
     libavcodec/x86/vp8dsp_init.c \
@@ -291,11 +310,13 @@ SRCS_C = \
     libavresample/audio_data.c \
     libavresample/audio_mix.c \
     libavresample/audio_mix_matrix.c \
+    libavresample/dither.c \
     libavresample/options.c \
     libavresample/resample.c \
     libavresample/utils.c \
     libavresample/x86/audio_convert_init.c \
     libavresample/x86/audio_mix_init.c \
+    libavresample/x86/dither_init.c \
 \
     libavutil/audio_fifo.c \
     libavutil/avstring.c \
@@ -322,6 +343,7 @@ SRCS_C = \
     libavutil/rational.c \
     libavutil/samplefmt.c \
     libavutil/sha.c \
+    libavutil/time.c \
     libavutil/timecode.c \
     libavutil/utils.c \
     libavutil/x86/cpu.c \
@@ -355,21 +377,28 @@ SRCS_YASM = \
     libavcodec/x86/h264_idct_10bit.asm \
     libavcodec/x86/h264_intrapred.asm \
     libavcodec/x86/h264_intrapred_10bit.asm \
+    libavcodec/x86/h264_qpel_8bit.asm \
     libavcodec/x86/h264_qpel_10bit.asm \
     libavcodec/x86/h264_weight.asm \
     libavcodec/x86/h264_weight_10bit.asm \
+    libavcodec/x86/hpeldsp.asm \
     libavcodec/x86/imdct36.asm \
+    libavcodec/x86/mpeg4qpel.asm \
     libavcodec/x86/rv34dsp.asm \
     libavcodec/x86/rv40dsp.asm \
     libavcodec/x86/sbrdsp.asm \
     libavcodec/x86/vc1dsp.asm \
+    libavcodec/x86/videodsp.asm \
+    libavcodec/x86/vorbisdsp.asm \
     libavcodec/x86/vp3dsp.asm \
     libavcodec/x86/vp56dsp.asm \
     libavcodec/x86/vp8dsp.asm \
     libavresample/x86/audio_convert.asm \
     libavresample/x86/audio_mix.asm \
+    libavresample/x86/dither.asm \
     libavresample/x86/util.asm \
     libavutil/x86/cpuid.asm \
+    libavutil/x86/emms.asm \
     libavutil/x86/float_dsp.asm \
     libswscale/x86/input.asm \
     libswscale/x86/output.asm \
@@ -395,4 +424,4 @@ $(OUT_LIB): $(OBJS)
 
 -include $(SRCS_C:%.c=$(OBJ_DIR)%.d)
 
-.PHONY: clean make_objdirs $(OBJ_DIRS)
+.PHONY: clean create_dirs $(OBJ_DIRS) $(OUT_LIB_DIR)

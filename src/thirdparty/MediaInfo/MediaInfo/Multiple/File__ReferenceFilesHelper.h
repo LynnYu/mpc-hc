@@ -1,23 +1,8 @@
-// File__ReferenceFilesHelper - class for analyzing/demuxing reference files
-// Copyright (C) 2011-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 #ifndef File__ReferenceFilesHelperH
@@ -52,6 +37,7 @@ public :
         int64u              Delay;
         int64u              FileSize;
         bool                IsCircular;
+        bool                IsMain;
         size_t              State;
         std::map<std::string, Ztring> Infos;
         MediaInfo_Internal* MI;
@@ -60,8 +46,10 @@ public :
         #endif //MEDIAINFO_FILTER
         #if MEDIAINFO_NEXTPACKET
             std::bitset<32> Status;
-        ibi::stream         IbiStream;
-        #endif //MEDIAINFO_NEXTPACKET
+            #if MEDIAINFO_IBI
+                ibi::stream IbiStream;
+            #endif //MEDIAINFO_IBI
+        #endif //MEDIAINFO_NEXTPACKET && MEDIAINFO_IBI
 
         reference()
         {
@@ -74,6 +62,7 @@ public :
             Delay=0;
             FileSize=(int64u)-1;
             IsCircular=false;
+            IsMain=false;
             State=0;
             MI=NULL;
             #if MEDIAINFO_FILTER
@@ -84,6 +73,9 @@ public :
     typedef std::vector<reference>  references;
     references                      References;
     bool                            TestContinuousFileNames;
+    bool                            ContainerHasNoId;
+    bool                            HasMainFile;
+    int64u                          ID_Max;
 
     //Streams management
     void ParseReferences();
@@ -126,6 +118,10 @@ private :
     //Helpers
     size_t Stream_Prepare(stream_t StreamKind, size_t StreamPos=(size_t)-1);
     void   FileSize_Compute();
+    #if MEDIAINFO_EVENTS
+    void SubFile_Start();
+    int64u                          StreamID_Previous;
+    #endif //MEDIAINFO_EVENTS
 };
 
 } //NameSpace

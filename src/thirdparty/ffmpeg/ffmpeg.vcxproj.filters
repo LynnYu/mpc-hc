@@ -70,6 +70,9 @@
     <None Include="libavcodec\x86\h264_intrapred_10bit.asm">
       <Filter>libavcodec\x86</Filter>
     </None>
+    <None Include="libavcodec\x86\h264_qpel_8bit.asm">
+      <Filter>libavcodec\x86</Filter>
+    </None>
     <None Include="libavcodec\x86\h264_qpel_10bit.asm">
       <Filter>libavcodec\x86</Filter>
     </None>
@@ -132,6 +135,24 @@
     </None>
     <None Include="libswscale\x86\scale.asm">
       <Filter>libswscale\x86</Filter>
+    </None>
+    <None Include="libavcodec\x86\videodsp.asm">
+      <Filter>libavcodec\x86</Filter>
+    </None>
+    <None Include="libavresample\x86\dither.asm">
+      <Filter>libavresample\x86</Filter>
+    </None>
+    <None Include="libavutil\x86\emms.asm">
+      <Filter>libavutil\x86</Filter>
+    </None>
+    <None Include="libavcodec\x86\vorbisdsp.asm">
+      <Filter>libavcodec\x86</Filter>
+    </None>
+    <None Include="libavcodec\x86\hpeldsp.asm">
+      <Filter>libavcodec\x86</Filter>
+    </None>
+    <None Include="libavcodec\x86\mpeg4qpel.asm">
+      <Filter>libavcodec\x86</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -203,6 +224,9 @@
       <Filter>libavcodec</Filter>
     </ClInclude>
     <ClInclude Include="libavcodec\adpcm_data.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\alac_data.h">
       <Filter>libavcodec</Filter>
     </ClInclude>
     <ClInclude Include="libavcodec\amr.h">
@@ -281,9 +305,6 @@
       <Filter>libavcodec</Filter>
     </ClInclude>
     <ClInclude Include="libavcodec\dsputil.h">
-      <Filter>libavcodec</Filter>
-    </ClInclude>
-    <ClInclude Include="libavcodec\dwt.h">
       <Filter>libavcodec</Filter>
     </ClInclude>
     <ClInclude Include="libavcodec\dxva.h">
@@ -682,6 +703,9 @@
     <ClInclude Include="libavresample\avresample.h">
       <Filter>libavresample</Filter>
     </ClInclude>
+    <ClInclude Include="libavresample\dither.h">
+      <Filter>libavresample</Filter>
+    </ClInclude>
     <ClInclude Include="libavresample\internal.h">
       <Filter>libavresample</Filter>
     </ClInclude>
@@ -731,9 +755,6 @@
       <Filter>libavutil</Filter>
     </ClInclude>
     <ClInclude Include="libavutil\crc.h">
-      <Filter>libavutil</Filter>
-    </ClInclude>
-    <ClInclude Include="libavutil\crc_data.h">
       <Filter>libavutil</Filter>
     </ClInclude>
     <ClInclude Include="libavutil\dict.h">
@@ -859,6 +880,42 @@
     <ClInclude Include="libswscale\version.h">
       <Filter>libswscale</Filter>
     </ClInclude>
+    <ClInclude Include="libavcodec\videodsp.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavutil\x86\emms.h">
+      <Filter>libavutil\x86</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\vorbisdsp.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\wmv2dsp.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavutil\time.h">
+      <Filter>libavutil</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\h264qpel.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\h264chroma.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\copy_block.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\h264idct.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\imgconvert.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\rnd_avg.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
+    <ClInclude Include="libavcodec\svq3.h">
+      <Filter>libavcodec</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mpc_helper.c" />
@@ -925,6 +982,9 @@
     <ClCompile Include="libavcodec\alac.c">
       <Filter>libavcodec</Filter>
     </ClCompile>
+    <ClCompile Include="libavcodec\alac_data.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
     <ClCompile Include="libavcodec\allcodecs.c">
       <Filter>libavcodec</Filter>
     </ClCompile>
@@ -947,6 +1007,9 @@
       <Filter>libavcodec</Filter>
     </ClCompile>
     <ClCompile Include="libavcodec\avpacket.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\avpicture.c">
       <Filter>libavcodec</Filter>
     </ClCompile>
     <ClCompile Include="libavcodec\bgmc.c">
@@ -1375,6 +1438,9 @@
     <ClCompile Include="libavcodec\vc1dsp.c">
       <Filter>libavcodec</Filter>
     </ClCompile>
+    <ClCompile Include="libavcodec\vmnc.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
     <ClCompile Include="libavcodec\vorbis.c">
       <Filter>libavcodec</Filter>
     </ClCompile>
@@ -1517,6 +1583,9 @@
       <Filter>libavresample</Filter>
     </ClCompile>
     <ClCompile Include="libavresample\audio_mix_matrix.c">
+      <Filter>libavresample</Filter>
+    </ClCompile>
+    <ClCompile Include="libavresample\dither.c">
       <Filter>libavresample</Filter>
     </ClCompile>
     <ClCompile Include="libavresample\options.c">
@@ -1677,6 +1746,51 @@
     </ClCompile>
     <ClCompile Include="libswscale\x86\yuv2rgb_template.c">
       <Filter>libswscale\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\videodsp.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\videodsp_template.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\x86\videodsp_init.c">
+      <Filter>libavcodec\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="libavresample\x86\dither_init.c">
+      <Filter>libavresample\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\x86\vorbisdsp_init.c">
+      <Filter>libavcodec\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\vorbisdsp.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\wmv2dsp.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavutil\time.c">
+      <Filter>libavutil</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\h264qpel.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\h264qpel_template.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\hpel_template.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\h264chroma.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\h264chroma_template.c">
+      <Filter>libavcodec</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\x86\h264chroma_init.c">
+      <Filter>libavcodec\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="libavcodec\h264addpx_template.c">
+      <Filter>libavcodec</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

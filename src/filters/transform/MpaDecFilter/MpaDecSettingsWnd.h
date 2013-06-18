@@ -23,6 +23,7 @@
 
 #include "../../InternalPropertyPage.h"
 #include "MpaDecFilter.h"
+#include "resource.h"
 #include <afxcmn.h>
 
 class __declspec(uuid("24103041-884B-4772-B0D3-A600E7CBFEC7"))
@@ -38,7 +39,10 @@ class __declspec(uuid("24103041-884B-4772-B0D3-A600E7CBFEC7"))
     int  m_mixer_layout;
     bool m_drc;
     bool m_spdif_ac3;
+    bool m_spdif_eac3;
+    bool m_spdif_truehd;
     bool m_spdif_dts;
+    bool m_spdif_dtshd;
 
     enum {
         IDC_PP_COMBO_MIXLAYOUT = 10000,
@@ -49,7 +53,10 @@ class __declspec(uuid("24103041-884B-4772-B0D3-A600E7CBFEC7"))
         IDC_PP_CHECK_MIXER,
         IDC_PP_CHECK_DRC,
         IDC_PP_CHECK_SPDIF_AC3,
-        IDC_PP_CHECK_SPDIF_DTS
+        IDC_PP_CHECK_SPDIF_EAC3,
+        IDC_PP_CHECK_SPDIF_TRUEHD,
+        IDC_PP_CHECK_SPDIF_DTS,
+        IDC_PP_CHECK_SPDIF_DTSHD
     };
 
     CButton   m_outfmt_group;
@@ -67,7 +74,10 @@ class __declspec(uuid("24103041-884B-4772-B0D3-A600E7CBFEC7"))
 
     CButton   m_spdif_group;
     CButton   m_spdif_ac3_check;
+    CButton   m_spdif_eac3_check;
+    CButton   m_spdif_truehd_check;
     CButton   m_spdif_dts_check;
+    CButton   m_spdif_dtshd_check;
 
 public:
     CMpaDecSettingsWnd();
@@ -78,8 +88,8 @@ public:
     void OnDeactivate();
     bool OnApply();
 
-    static LPCTSTR GetWindowTitle() { return _T("Settings"); }
-    static CSize GetWindowSize() { return CSize(225, 156); }
+    static LPCTSTR GetWindowTitle() { return MAKEINTRESOURCE(IDS_FILTER_SETTINGS_CAPTION); }
+    static CSize GetWindowSize() { return CSize(225, 220); }
 
     DECLARE_MESSAGE_MAP()
 
@@ -87,4 +97,5 @@ public:
     afx_msg void OnInt24Check();
     afx_msg void OnInt32Check();
     afx_msg void OnFloatCheck();
+    afx_msg void OnDTSCheck();
 };

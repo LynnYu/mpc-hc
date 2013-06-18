@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -21,22 +21,23 @@
 #include "stdafx.h"
 #include "Mixer.h"
 
+#pragma warning(push)
 #pragma warning(disable: 4005)
 extern "C" {
 #include "ffmpeg/libavresample/avresample.h"
 #include "ffmpeg/libavutil/samplefmt.h"
 #include "ffmpeg/libavutil/opt.h"
 }
-#pragma warning(default: 4005)
+#pragma warning(pop)
 #include "AudioHelper.h"
 
 CMixer::CMixer()
-    : m_pAVRCxt(NULL)
-    , m_matrix_dbl(NULL)
+    : m_pAVRCxt(nullptr)
+    , m_matrix_dbl(nullptr)
     , m_in_avsf(AV_SAMPLE_FMT_NONE)
-    , m_in_avsf_used(AV_SAMPLE_FMT_NONE)
     , m_in_layout(0)
     , m_out_layout(0)
+    , m_matrix_norm(0.0f)
     , m_in_samplerate(0)
     , m_out_samplerate(0)
 {
@@ -50,12 +51,13 @@ CMixer::~CMixer()
     av_free(m_matrix_dbl);
 }
 
-void CMixer::Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int in_samplerate, int out_samplerate)
+void CMixer::Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, float matrix_norm, int in_samplerate, int out_samplerate)
 {
     // reset parameters
     m_in_avsf        = AV_SAMPLE_FMT_NONE;
     m_in_layout      = 0;
     m_out_layout     = 0;
+    m_matrix_norm    = 0.0f;
     m_in_samplerate  = 0;
     m_out_samplerate = 0;
     av_free(m_matrix_dbl);
@@ -63,15 +65,9 @@ void CMixer::Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int
     // Close Resample Context
     avresample_close(m_pAVRCxt);
 
-    if (in_avsf >= AV_SAMPLE_FMT_U8P && in_avsf <= AV_SAMPLE_FMT_DBLP) { // planar audio is not supported (ffmpeg crashed)
-        m_in_avsf_used = AV_SAMPLE_FMT_FLT; // convert to float
-    } else {
-        m_in_avsf_used = in_avsf;
-    }
-
     int ret = 0;
     // Set options
-    av_opt_set_int(m_pAVRCxt, "in_sample_fmt",      m_in_avsf_used,    0);
+    av_opt_set_int(m_pAVRCxt, "in_sample_fmt",      in_avsf,           0);
     av_opt_set_int(m_pAVRCxt, "out_sample_fmt",     AV_SAMPLE_FMT_FLT, 0); // forced float output
     av_opt_set_int(m_pAVRCxt, "in_channel_layout",  in_layout,         0);
     av_opt_set_int(m_pAVRCxt, "out_channel_layout", out_layout,        0);
@@ -96,30 +92,30 @@ void CMixer::Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int
         m_matrix_dbl[2] = 0.0;
         m_matrix_dbl[3] = 1.0;
         if (out_layout == AV_CH_LAYOUT_QUAD) {
-            m_matrix_dbl[4] = 0.5;
-            m_matrix_dbl[5] = (-0.5);
-            m_matrix_dbl[6] = (-0.5);
-            m_matrix_dbl[7] = 0.5;
+            m_matrix_dbl[4] = 0.6666;
+            m_matrix_dbl[5] = (-0.2222);
+            m_matrix_dbl[6] = (-0.2222);
+            m_matrix_dbl[7] = 0.6666;
         } else if (out_layout == AV_CH_LAYOUT_5POINT1 || out_layout == AV_CH_LAYOUT_7POINT1) {
             m_matrix_dbl[4] = 0.5;
             m_matrix_dbl[5] = 0.5;
             m_matrix_dbl[6] = 0.0;
             m_matrix_dbl[7] = 0.0;
-            m_matrix_dbl[8] = 0.5;
-            m_matrix_dbl[9] = (-0.5);
-            m_matrix_dbl[10] = (-0.5);
-            m_matrix_dbl[11] = 0.5;
+            m_matrix_dbl[8] =  0.6666;
+            m_matrix_dbl[9] = (-0.2222);
+            m_matrix_dbl[10] = (-0.2222);
+            m_matrix_dbl[11] = 0.6666;
             if (out_layout == AV_CH_LAYOUT_7POINT1) {
-                m_matrix_dbl[12] = 0.5;
-                m_matrix_dbl[13] = (-0.5);
-                m_matrix_dbl[14] = (-0.5);
-                m_matrix_dbl[15] = 0.5;
+                m_matrix_dbl[12] = 0.6666;
+                m_matrix_dbl[13] = (-0.2222);
+                m_matrix_dbl[14] = (-0.2222);
+                m_matrix_dbl[15] = 0.6666;
             }
         }
     } else {
         const double center_mix_level   = M_SQRT1_2;
-        const double surround_mix_level = M_SQRT1_2;
-        const double lfe_mix_level      = M_SQRT1_2;
+        const double surround_mix_level = 1.0;
+        const double lfe_mix_level      = 1.0;
         const int normalize = 0;
         ret = avresample_build_matrix(in_layout, out_layout, center_mix_level, surround_mix_level, lfe_mix_level, normalize, m_matrix_dbl, in_ch, AV_MATRIX_ENCODING_NONE);
         if (ret < 0) {
@@ -127,10 +123,44 @@ void CMixer::Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int
             av_free(m_matrix_dbl);
             return;
         }
+
+        // if back channels do not have sound, then divide side channels for the back and side
+        if (out_layout == AV_CH_LAYOUT_7POINT1) {
+            bool back_no_sound = true;
+            for (int i = 0; i < in_ch * 2; i++) {
+                if (m_matrix_dbl[4 * in_ch + i] != 0.0) {
+                    back_no_sound = false;
+                }
+            }
+            if (back_no_sound) {
+                for (int i = 0; i < in_ch * 2; i++) {
+                    m_matrix_dbl[4 * in_ch + i] = (m_matrix_dbl[6 * in_ch + i] *= M_SQRT1_2);
+                }
+            }
+        }
+    }
+
+    if (matrix_norm > 0.0f && matrix_norm <= 1.0f) { // 0.0 - normalize off; 1.0 - full normalize matrix
+        double max_peak = 0;
+        for (int j = 0; j < out_ch; j++) {
+            double peak = 0;
+            for (int i = 0; i < in_ch; i++) {
+                peak += fabs(m_matrix_dbl[j * in_ch + i]);
+            }
+            if (peak > max_peak) {
+                max_peak = peak;
+            }
+        }
+        if (max_peak > 1.0) {
+            double g = ((max_peak - 1.0) * (1.0 - matrix_norm) + 1.0) / max_peak;
+            for (int i = 0, n = in_ch * out_ch; i < n; i++) {
+                m_matrix_dbl[i] *= g;
+            }
+        }
     }
 
 #ifdef _DEBUG
-    CString matrix_str;
+    CString matrix_str = _T("Mixer: matrix\n");
     for (int j = 0; j < out_ch; j++) {
         matrix_str.AppendFormat(_T("%d:"), j + 1);
         for (int i = 0; i < in_ch; i++) {
@@ -153,18 +183,20 @@ void CMixer::Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int
     m_in_avsf        = in_avsf;
     m_in_layout      = in_layout;
     m_out_layout     = out_layout;
+    m_matrix_norm    = matrix_norm;
     m_in_samplerate  = in_samplerate;
     m_out_samplerate = out_samplerate;
 }
 
-void CMixer::Update(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int in_samplerate, int out_samplerate)
+void CMixer::Update(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, float matrix_norm, int in_samplerate, int out_samplerate)
 {
     if (in_avsf != m_in_avsf ||
             in_layout != m_in_layout ||
             out_layout != m_out_layout ||
+            matrix_norm != m_matrix_norm ||
             in_samplerate != m_in_samplerate ||
             out_samplerate != m_out_samplerate) {
-        Init(in_avsf, in_layout, out_layout, in_samplerate, out_samplerate);
+        Init(in_avsf, in_layout, out_layout, matrix_norm, in_samplerate, out_samplerate);
     }
 }
 
@@ -173,21 +205,16 @@ int CMixer::Mixing(float* pOutput, int out_samples, BYTE* pInput, int in_samples
     int in_ch  = av_popcount(m_in_layout);
     int out_ch = av_popcount(m_out_layout);
 
-    float* buf  = NULL;
-    if (m_in_avsf != m_in_avsf_used) { // need convert
-        buf = new float[in_samples * in_ch];
-        convert_to_float(m_in_avsf, (WORD)in_ch, in_samples, pInput, buf); // convert to float
-        pInput = (BYTE*)buf;
+    int in_plane_nb   = av_sample_fmt_is_planar(m_in_avsf) ? in_ch : 1;
+    int in_plane_size = in_samples * (av_sample_fmt_is_planar(m_in_avsf) ? 1 : in_ch) * av_get_bytes_per_sample(m_in_avsf);
+    static BYTE* ppInput[AVRESAMPLE_MAX_CHANNELS];
+    for (int i = 0; i < in_plane_nb; i++) {
+        ppInput[i] = pInput + i * in_plane_size;
     }
 
-    // int in_plane_size  = in_samples * (av_sample_fmt_is_planar(in_avsf) ? 1 : in_ch) * av_get_bytes_per_sample(in_avsf);
-    int in_plane_size  = in_samples * in_ch * av_get_bytes_per_sample(m_in_avsf_used);
     int out_plane_size = out_samples * out_ch * sizeof(float);
 
-    out_samples = avresample_convert(m_pAVRCxt, (uint8_t**)&pOutput, in_plane_size, out_samples, (uint8_t**)&pInput, out_plane_size, in_samples);
-    if (buf) {
-        delete [] buf;
-    }
+    out_samples = avresample_convert(m_pAVRCxt, (uint8_t**)&pOutput, out_plane_size, out_samples, ppInput, in_plane_size, in_samples);
     if (out_samples < 0) {
         TRACE(_T("Mixer: avresample_convert failed\n"));
         return 0;
@@ -220,7 +247,7 @@ void CMixer::FlushBuffers()
         }
 
         // Set Matrix on the context
-        ret = avresample_set_matrix(m_pAVRCxt, m_matrix_dbl, m_in_layout);
+        ret = avresample_set_matrix(m_pAVRCxt, m_matrix_dbl, av_popcount(m_in_layout));
         if (ret < 0) {
             TRACE(_T("Mixer: avresample_set_matrix failed\n"));
             return;

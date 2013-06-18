@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2008-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -24,7 +24,9 @@
 #include "RenderedHdmvSubtitle.h"
 
 CRenderedHdmvSubtitle::CRenderedHdmvSubtitle(CCritSec* pLock, SUBTITLE_TYPE nType, const CString& name, LCID lcid)
-    : CSubPicProviderImpl(pLock), m_name(name), m_lcid(lcid)
+    : CSubPicProviderImpl(pLock)
+    , m_name(name)
+    , m_lcid(lcid)
 {
     switch (nType) {
         case ST_DVB:
@@ -41,7 +43,7 @@ CRenderedHdmvSubtitle::CRenderedHdmvSubtitle(CCritSec* pLock, SUBTITLE_TYPE nTyp
             break;
         default:
             ASSERT(FALSE);
-            m_pSub = NULL;
+            m_pSub = nullptr;
     }
     m_rtStart = 0;
 }
@@ -54,7 +56,7 @@ CRenderedHdmvSubtitle::~CRenderedHdmvSubtitle()
 STDMETHODIMP CRenderedHdmvSubtitle::NonDelegatingQueryInterface(REFIID riid, void** ppv)
 {
     CheckPointer(ppv, E_POINTER);
-    *ppv = NULL;
+    *ppv = nullptr;
 
     return
         QI(IPersist)
@@ -176,4 +178,10 @@ HRESULT CRenderedHdmvSubtitle::NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME 
     m_pSub->Reset();
     m_rtStart = tStart;
     return S_OK;
+}
+
+void CRenderedHdmvSubtitle::EndOfStream()
+{
+    CAutoLock cAutoLock(&m_csCritSec);
+    m_pSub->EndOfStream();
 }

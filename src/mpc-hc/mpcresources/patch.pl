@@ -1,6 +1,6 @@
 #/bin/perl
 #
-# (C) 2010-2012 see Authors.txt
+# (C) 2010-2013 see Authors.txt
 #
 # This file is part of MPC-HC.
 #
@@ -57,11 +57,11 @@ my $DesignInfo = {};
 
 print "Reading rc file...\n";
 my $rcfile = shift(@ARGV);
-my @RcFile = readFile($rcfile, 1);
+my @RcFile = readFile($rcfile, 2);
 analyzeData(\@RcFile, \@Outline, $Dialogs, $Menus, $Strings, \@VersionInfo, $DesignInfo);
 
 print "\nReading string text file...\n";
-my @TxtFile = readFile($TxtFileName, 0);
+my @TxtFile = readFile($TxtFileName, 1);
 analyzeTxt(\@TxtFile, $NewDialogs, $NewMenus, $NewStrings);
 
 print "\nWriting new rc file...\n";
@@ -200,7 +200,7 @@ sub mergeDialog {
             my $value = $_->[1];
             my $curline = $contents[--$line];
             $curline = skipNonTranslatedStr($curline);
-            if ($curline =~ /("[^"](?:[^"]|"")*")/) {
+            if ($curline =~ /("(?:[^"]|"")+")/) {
                 $contents[$line] =~ s/\Q$1\E/$value/;
             }
         }

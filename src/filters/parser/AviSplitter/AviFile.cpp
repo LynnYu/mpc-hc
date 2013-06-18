@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -49,11 +49,11 @@ HRESULT CAviFile::Init()
     Seek(0);
     HRESULT hr = Parse(0, GetLength());
     UNREFERENCED_PARAMETER(hr);
-    if (m_movis.GetCount() == 0) { // FAILED(hr) is allowed as long as there was a movi chunk found
+    if (m_movis.IsEmpty()) { // FAILED(hr) is allowed as long as there was a movi chunk found
         return E_FAIL;
     }
 
-    if (m_avih.dwStreams == 0 && m_strms.GetCount() > 0) {
+    if (m_avih.dwStreams == 0 && !m_strms.IsEmpty()) {
         m_avih.dwStreams = (DWORD)m_strms.GetCount();
     }
 
@@ -220,7 +220,7 @@ HRESULT CAviFile::Parse(DWORD parentid, __int64 end)
                     }
                     if (m_isamv) {
                         // First alway video, second always audio
-                        strm->strh.fccType = m_strms.GetCount() == 0 ? FCC('vids') : FCC('amva');
+                        strm->strh.fccType = m_strms.IsEmpty() ? FCC('vids') : FCC('amva');
                         strm->strh.dwRate  = m_avih.dwReserved[0] * 1000; // dwReserved[0] = fps!
                         strm->strh.dwScale = 1000;
                     }
@@ -258,17 +258,16 @@ HRESULT CAviFile::Parse(DWORD parentid, __int64 end)
                     if (!strm) {
                         strm.Attach(DEBUG_NEW strm_t());
                     }
-                    ASSERT(strm->indx == NULL);
+                    ASSERT(strm->indx == nullptr);
                     AVISUPERINDEX* pSuperIndex;
                     if (size < MAXDWORD - 8) {
-                        // Fix buffer overrun vulnerability : http://www.vulnhunt.com/advisories/CAL-20070912-1_Multiple_vendor_produce_handling_AVI_file_vulnerabilities.txt
-                        TRY {
+                        // Fix buffer overrun vulnerability
+                        try {
                             pSuperIndex = (AVISUPERINDEX*)DEBUG_NEW unsigned char [(size_t)(size + 8)];
+                        } catch (CMemoryException* e) {
+                            pSuperIndex = nullptr;
+                            e->Delete();
                         }
-                        CATCH(CMemoryException, e) {
-                            pSuperIndex = NULL;
-                        }
-                        END_CATCH
                         if (pSuperIndex) {
                             strm->indx.Attach(pSuperIndex);
                             strm->indx->fcc = FCC('indx');
@@ -289,7 +288,7 @@ HRESULT CAviFile::Parse(DWORD parentid, __int64 end)
                     //if (S_OK != Read(m_vprp)) return E_FAIL;
                     break;
                 case FCC('idx1'):
-                    ASSERT(m_idx1 == NULL);
+                    ASSERT(m_idx1 == nullptr);
                     m_idx1.Attach((AVIOLDINDEX*)DEBUG_NEW BYTE[size + 8]);
                     m_idx1->fcc = FCC('idx1');
                     m_idx1->cb = size;
@@ -325,6 +324,11 @@ REFERENCE_TIME CAviFile::GetTotalTime()
 
     for (DWORD i = 0; i < m_avih.dwStreams; ++i) {
         strm_t* s = m_strms[i];
+
+        if (s->IsRawSubtitleStream()) {
+            continue;
+        }
+
         REFERENCE_TIME t2 = s->GetRefTime((DWORD)s->cs.GetCount(), s->totalsize);
         t = max(t, t2);
     }
@@ -342,16 +346,16 @@ HRESULT CAviFile::BuildIndex()
 
     DWORD nSuperIndexes = 0;
 
-    for (DWORD i = 0; i < m_avih.dwStreams; ++i) {
-        strm_t* s = m_strms[i];
+    for (DWORD track = 0; track < m_avih.dwStreams; track++) {
+        strm_t* s = m_strms[track];
         if (s->indx && s->indx->nEntriesInUse > 0) {
-            ++nSuperIndexes;
+            nSuperIndexes++;
         }
     }
 
     if (nSuperIndexes == m_avih.dwStreams) {
-        for (DWORD i = 0; i < m_avih.dwStreams; ++i) {
-            strm_t* s = m_strms[i];
+        for (DWORD track = 0; track < m_avih.dwStreams; track++) {
+            strm_t* s = m_strms[track];
 
             AVISUPERINDEX* idx = (AVISUPERINDEX*)s->indx;
 
@@ -384,15 +388,15 @@ HRESULT CAviFile::BuildIndex()
                 }
 
                 for (DWORD k = 0; k < p->nEntriesInUse; ++k) {
-                    s->cs[frame].size = size;
-                    s->cs[frame].filepos = p->qwBaseOffset + p->aIndex[k].dwOffset;
+                    s->cs[frame].size      = size;
+                    s->cs[frame].filepos   = p->qwBaseOffset + p->aIndex[k].dwOffset;
                     s->cs[frame].fKeyFrame = !(p->aIndex[k].dwSize & AVISTDINDEX_DELTAFRAME)
                                              || s->strh.fccType == FCC('auds');
                     s->cs[frame].fChunkHdr = false;
-                    s->cs[frame].orgsize = p->aIndex[k].dwSize & AVISTDINDEX_SIZEMASK;
+                    s->cs[frame].orgsize   = p->aIndex[k].dwSize & AVISTDINDEX_SIZEMASK;
 
                     if (m_idx1) {
-                        s->cs[frame].filepos -= 8;
+                        s->cs[frame].filepos  -= 8;
                         s->cs[frame].fChunkHdr = true;
                     }
 
@@ -404,7 +408,7 @@ HRESULT CAviFile::BuildIndex()
             s->totalsize = size;
         }
     } else if (AVIOLDINDEX* idx = m_idx1) {
-        DWORD len = idx->cb / sizeof(idx->aIndex[0]);
+        size_t len    = idx->cb / sizeof(idx->aIndex[0]);
 
         UINT64 offset = m_movis.GetHead() + 8;
 
@@ -414,40 +418,38 @@ HRESULT CAviFile::BuildIndex()
             Seek(offset + idx->aIndex[0].dwOffset);
             Read(id);
             if (id != idx->aIndex[0].dwChunkId) {
-                TRACE(_T("WARNING: CAviFile::Init() detected absolute chunk addressing in \'idx1\'"));
+                TRACE(_T("WARNING: CAviFile::Init() detected absolute chunk addressing in \'idx1\'\n"));
                 offset = 0;
             }
         }
 
-        for (DWORD i = 0; i < m_avih.dwStreams; ++i) {
-            strm_t* s = m_strms[i];
+        for (DWORD track = 0; track < m_avih.dwStreams; track++) {
+            strm_t* s = m_strms[track];
 
             // calculate the number of frames and set index size before using it
-            DWORD nFrames = 0;
-            for (DWORD j = 0; j < len; ++j) {
-                if (TRACKNUM(idx->aIndex[j].dwChunkId) == i) {
-                    ++nFrames;
+            size_t nFrames = 0;
+            for (size_t i = 0; i < len; i++) {
+                if (TRACKNUM(idx->aIndex[i].dwChunkId) == track) {
+                    nFrames++;
                 }
             }
             s->cs.SetCount(nFrames);
 
-            //read index
-            DWORD frame = 0;
+            // read index
+            size_t frame = 0;
             UINT64 size = 0;
-            for (DWORD j = 0; j < len; ++j) {
-                DWORD TrackNumber = TRACKNUM(idx->aIndex[j].dwChunkId);
-
-                if (TrackNumber == i) {
-                    s->cs[frame].size = size;
-                    s->cs[frame].filepos = offset + idx->aIndex[j].dwOffset;
-                    s->cs[frame].fKeyFrame = !!(idx->aIndex[j].dwFlags & AVIIF_KEYFRAME)
+            for (size_t i = 0; i < len; i++) {
+                if (TRACKNUM(idx->aIndex[i].dwChunkId) == track) {
+                    s->cs[frame].size      = size;
+                    s->cs[frame].filepos   = offset + idx->aIndex[i].dwOffset;
+                    s->cs[frame].fKeyFrame = (idx->aIndex[i].dwFlags & AVIIF_KEYFRAME)
                                              || s->strh.fccType == FCC('auds') // FIXME: some audio index is without any kf flag
                                              || frame == 0; // grrr
-                    s->cs[frame].fChunkHdr = j == len - 1 || idx->aIndex[j].dwOffset != idx->aIndex[j + 1].dwOffset;
-                    s->cs[frame].orgsize = idx->aIndex[j].dwSize;
+                    s->cs[frame].fChunkHdr = i + 1 == len || idx->aIndex[i].dwOffset != idx->aIndex[i + 1].dwOffset;
+                    s->cs[frame].orgsize   = idx->aIndex[i].dwSize;
 
-                    ++frame;
-                    size += s->GetChunkSize(idx->aIndex[j].dwSize);
+                    frame++;
+                    size += s->GetChunkSize(idx->aIndex[i].dwSize);
                 }
             }
 
@@ -456,8 +458,8 @@ HRESULT CAviFile::BuildIndex()
     }
 
     m_idx1.Free();
-    for (DWORD i = 0; i < m_avih.dwStreams; ++i) {
-        m_strms[i]->indx.Free();
+    for (DWORD track = 0; track < m_avih.dwStreams; track++) {
+        m_strms[track]->indx.Free();
     }
 
     return S_OK;
@@ -577,7 +579,7 @@ bool CAviFile::IsInterleaved(bool fKeepInfo)
 
 REFERENCE_TIME CAviFile::strm_t::GetRefTime(DWORD frame, UINT64 size)
 {
-    if (frame == 0 || strh.dwRate == 0) {
+    if (strh.dwRate == 0) {
         return 0;
     }
     if (strh.fccType == FCC('auds')) {
@@ -598,7 +600,7 @@ DWORD CAviFile::strm_t::GetFrame(REFERENCE_TIME rt)
 {
     DWORD frame;
 
-    if (strh.dwScale == 0 || rt <= 0 || cs.GetCount() == 0) {
+    if (strh.dwScale == 0 || rt <= 0 || cs.IsEmpty()) {
         frame = 0;
     } else if (strh.fccType == FCC('auds')) {
         WAVEFORMATEX* wfe = (WAVEFORMATEX*)strf.GetData();

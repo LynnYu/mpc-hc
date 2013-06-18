@@ -32,7 +32,9 @@
 #include "config.h"
 
 #if HAVE_SCHED_GETAFFINITY
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
 #include <sched.h>
 #endif
 #if HAVE_GETPROCESSAFFINITYMASK
@@ -63,6 +65,35 @@
 #include "os2threads.h"
 #endif
 
+// ==> Start patch MPC
+int ff_pthread_lockmgr_cb(void **mutex, enum AVLockOp op)
+{
+    int ret = 0;
+    av_log(NULL, AV_LOG_DEBUG, "ff_pthread_lockmgr_cb called %d on mutex %p\n", op, *mutex);
+    switch (op) {
+    case AV_LOCK_CREATE:
+        *mutex = av_malloc(sizeof(pthread_mutex_t));
+        if (!mutex)
+            return AVERROR(ENOMEM);
+        ret = pthread_mutex_init(*mutex, NULL);
+        break;
+    case AV_LOCK_OBTAIN:
+        ret = pthread_mutex_lock(*mutex);
+        break;
+    case AV_LOCK_RELEASE:
+        ret = pthread_mutex_unlock(*mutex);
+        break;
+    case AV_LOCK_DESTROY:
+        ret = pthread_mutex_destroy(*mutex);
+        av_freep(mutex);
+        break;
+    default:
+        return AVERROR_BUG;
+    }
+    return AVERROR(ret);
+}
+// ==> End patch MPC
+
 typedef int (action_func)(AVCodecContext *c, void *arg);
 typedef int (action_func2)(AVCodecContext *c, void *arg, int jobnr, int threadnr);
 
@@ -85,7 +116,7 @@ typedef struct ThreadContext {
 } ThreadContext;
 
 /// Max number of frame buffers that can be allocated when using frame threads.
-#define MAX_BUFFERS (32+1)
+#define MAX_BUFFERS (34+1)
 
 /**
  * Context used by codec threads and stored in their AVCodecContext thread_opaque.
@@ -590,7 +621,7 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
                 pthread_cond_wait(&p->progress_cond, &p->progress_mutex);
 
             if (p->state == STATE_GET_BUFFER) {
-                p->result = p->avctx->get_buffer(p->avctx, p->requested_frame);
+                p->result = ff_get_buffer(p->avctx, p->requested_frame);
                 p->state  = STATE_SETTING_UP;
                 pthread_cond_signal(&p->progress_cond);
             }
@@ -755,7 +786,11 @@ static void frame_thread_free(AVCodecContext *avctx, int thread_count)
     park_frame_worker_threads(fctx, thread_count);
 
     if (fctx->prev_thread && fctx->prev_thread != fctx->threads)
-        update_context_from_thread(fctx->threads->avctx, fctx->prev_thread->avctx, 0);
+        if (update_context_from_thread(fctx->threads->avctx, fctx->prev_thread->avctx, 0) < 0) {
+            av_log(avctx, AV_LOG_ERROR, "Final thread update failed\n");
+            fctx->prev_thread->avctx->internal->is_copy = fctx->threads->avctx->internal->is_copy;
+            fctx->threads->avctx->internal->is_copy = 1;
+        }
 
     fctx->die = 1;
 
@@ -965,7 +1000,7 @@ int ff_thread_get_buffer(AVCodecContext *avctx, AVFrame *f)
 
     if (!(avctx->active_thread_type&FF_THREAD_FRAME)) {
         f->thread_opaque = NULL;
-        return avctx->get_buffer(avctx, f);
+        return ff_get_buffer(avctx, f);
     }
 
     if (p->state != STATE_SETTING_UP &&
@@ -988,7 +1023,7 @@ int ff_thread_get_buffer(AVCodecContext *avctx, AVFrame *f)
 
     if (avctx->thread_safe_callbacks ||
         avctx->get_buffer == avcodec_default_get_buffer) {
-        err = avctx->get_buffer(avctx, f);
+        err = ff_get_buffer(avctx, f);
     } else {
         pthread_mutex_lock(&p->progress_mutex);
         p->requested_frame = f;
@@ -1019,6 +1054,9 @@ void ff_thread_release_buffer(AVCodecContext *avctx, AVFrame *f)
 {
     PerThreadContext *p = avctx->thread_opaque;
     FrameThreadContext *fctx;
+
+    if (!f->data[0])
+        return;
 
     if (!(avctx->active_thread_type&FF_THREAD_FRAME)) {
         avctx->release_buffer(avctx, f);

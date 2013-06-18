@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -41,10 +41,10 @@ CCDecoder::~CCDecoder()
 {
     if (!m_sts.IsEmpty() && !m_fn.IsEmpty()) {
         m_sts.Sort();
-        m_sts.SaveAs(m_fn, EXTSRT, -1, CTextFile::DEFAULT_ENCODING);
-        m_sts.SaveAs(m_fn.Left(m_fn.ReverseFind('.') + 1) + _T("utf8.srt"), EXTSRT, -1, CTextFile::UTF8);
-        m_sts.SaveAs(m_fn.Left(m_fn.ReverseFind('.') + 1) + _T("utf16le.srt"), EXTSRT, -1, CTextFile::LE16);
-        m_sts.SaveAs(m_fn.Left(m_fn.ReverseFind('.') + 1) + _T("utf16be.srt"), EXTSRT, -1, CTextFile::BE16);
+        m_sts.SaveAs(m_fn, EXTSRT, -1, 0, CTextFile::DEFAULT_ENCODING);
+        m_sts.SaveAs(m_fn.Left(m_fn.ReverseFind('.') + 1) + _T("utf8.srt"), EXTSRT, -1, 0, CTextFile::UTF8);
+        m_sts.SaveAs(m_fn.Left(m_fn.ReverseFind('.') + 1) + _T("utf16le.srt"), EXTSRT, -1, 0, CTextFile::LE16);
+        m_sts.SaveAs(m_fn.Left(m_fn.ReverseFind('.') + 1) + _T("utf16be.srt"), EXTSRT, -1, 0, CTextFile::BE16);
     }
 }
 
@@ -110,7 +110,7 @@ void CCDecoder::SaveDisp(__int64 time)
 void CCDecoder::DecodeCC(BYTE* buff, int len, __int64 time)
 {
     if (!m_rawfn.IsEmpty()) {
-        FILE* f = NULL;
+        FILE* f = nullptr;
         if (!_tfopen_s(&f, m_rawfn, _T("at"))) {
             _ftprintf_s(f, _T("%02d:%02d:%02d.%03d\n"),
                         (int)(time / 1000 / 60 / 60),

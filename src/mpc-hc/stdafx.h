@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -26,6 +26,7 @@
 #undef _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
 #include "../../include/stdafx_common_afx2.h"
 #include "../../include/stdafx_common_dshow.h"
+#include "mpc-hc_config.h"
 
 #include <Windows.h>
 #include <algorithm>
@@ -71,17 +72,11 @@
 
 #include "DSUtil.h"
 
-#define ResStr(id) CString(MAKEINTRESOURCE(id))
-
 template <class T = CString, class S = CString>
-class CAtlStringMap : public CAtlMap<S, T, CStringElementTraits<S> > {};
+class CAtlStringMap : public CAtlMap<S, T, CStringElementTraits<S>> {};
 
 #define CheckAndLog(x, msg)  hr = ##x; if (FAILED(hr)) { TRACE(msg _T(": 0x%08x\n"), hr); return hr; }
 #define CheckNoLog(x)        hr = ##x; if (FAILED(hr)) { return hr; }
-
-#if !defined(USE_MEDIAINFO_STATIC) && !defined(MPCHC_LITE)
-#define USE_MEDIAINFO_STATIC
-#endif
 
 #include "resource.h"
 #include "FakeFilterMapper2.h"

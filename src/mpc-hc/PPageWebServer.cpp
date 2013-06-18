@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -179,27 +179,14 @@ bool CPPageWebServer::PickDir(CString& dir)
         CFileDialog dlg(TRUE);
         IFileOpenDialog* openDlgPtr = dlg.GetIFileOpenDialog();
 
-        if (openDlgPtr != NULL) {
+        if (openDlgPtr != nullptr) {
             openDlgPtr->SetTitle(strTitle);
             openDlgPtr->SetOptions(FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
 
             if (!dir.IsEmpty()) {
-                // Typedef for function SHCreateItemFromParsingName
-                typedef HRESULT(STDAPICALLTYPE * PFN_TYPE_SHCreateItemFromParsingName)(PCWSTR /*pszPath*/, IBindCtx* /*pbc*/,  REFIID /*riid*/, void** /*ppv*/);
-
-                // Load SHELL32.DLL to get pointer to aforementioned function
-                HINSTANCE hDllShell = ::LoadLibrary(_T("Shell32.dll"));
-                PFN_TYPE_SHCreateItemFromParsingName pfnSHCreateItemFromParsingName = NULL;
-                if (hDllShell != NULL) {
-                    // Try to get the pointer to that function
-                    pfnSHCreateItemFromParsingName = reinterpret_cast<PFN_TYPE_SHCreateItemFromParsingName>(::GetProcAddress(hDllShell, "SHCreateItemFromParsingName"));
-                }
-
-                if (pfnSHCreateItemFromParsingName != NULL) {
-                    CComPtr<IShellItem> psiFolder;
-                    if (SUCCEEDED(pfnSHCreateItemFromParsingName(dir, NULL, IID_PPV_ARGS(&psiFolder)))) {
-                        openDlgPtr->SetFolder(psiFolder);
-                    }
+                CComPtr<IShellItem> psiFolder;
+                if (SUCCEEDED(afxGlobalData.ShellCreateItemFromParsingName(dir, nullptr, IID_PPV_ARGS(&psiFolder)))) {
+                    openDlgPtr->SetFolder(psiFolder);
                 }
             }
 
@@ -211,11 +198,11 @@ bool CPPageWebServer::PickDir(CString& dir)
             openDlgPtr->Release();
         }
     } else {
-        TCHAR buff[_MAX_PATH];
+        TCHAR buff[MAX_PATH];
 
         BROWSEINFO bi;
         bi.hwndOwner = m_hWnd;
-        bi.pidlRoot = NULL;
+        bi.pidlRoot = nullptr;
         bi.pszDisplayName = buff;
         bi.lpszTitle = strTitle;
         bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_VALIDATE | BIF_USENEWUI;

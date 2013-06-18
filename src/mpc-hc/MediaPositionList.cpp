@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -106,11 +106,11 @@ void CFilePositionList::Empty()
 {
     CString strFilePos;
 
-    for (int i = 0, len = GetCount(); i < len; i++) {
+    for (int i = 0, len = (int)GetCount(); i < len; i++) {
         strFilePos.Format(_T("File Name %d"), i);
-        m_pApp->WriteProfileString(m_lpszSection, strFilePos, NULL);
+        m_pApp->WriteProfileString(m_lpszSection, strFilePos, nullptr);
         strFilePos.Format(_T("File Position %d"), i);
-        m_pApp->WriteProfileString(m_lpszSection, strFilePos, NULL);
+        m_pApp->WriteProfileString(m_lpszSection, strFilePos, nullptr);
     }
 
     RemoveAll();
@@ -140,9 +140,7 @@ bool CFilePositionList::AddEntry(LPCTSTR lpszFileName)
     }
 
     // Add the new position
-    FILE_POSITION filePosition;
-    filePosition.strFile = lpszFileName;
-    filePosition.llPosition = 0;
+    FILE_POSITION filePosition = { lpszFileName, 0 };
     AddHead(filePosition);
 
     // Ensure the list doesn't grow indefinitely
@@ -210,9 +208,9 @@ void CDVDPositionList::Empty()
 {
     CString strDVDPos;
 
-    for (int i = 0, len = GetCount(); i < len; i++) {
+    for (int i = 0, len = (int)GetCount(); i < len; i++) {
         strDVDPos.Format(_T("DVD Position %d"), i);
-        m_pApp->WriteProfileString(m_lpszSection, strDVDPos, NULL);
+        m_pApp->WriteProfileString(m_lpszSection, strDVDPos, nullptr);
     }
 
     RemoveAll();
@@ -242,8 +240,7 @@ bool CDVDPositionList::AddEntry(ULONGLONG llDVDGuid)
     }
 
     // Add the new position
-    DVD_POSITION dvdPosition;
-    dvdPosition.llDVDGuid = llDVDGuid;
+    DVD_POSITION dvdPosition = { llDVDGuid, 0, 0 };
     AddHead(dvdPosition);
 
     // Ensure the list doesn't grow indefinitely

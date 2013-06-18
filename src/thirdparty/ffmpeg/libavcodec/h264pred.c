@@ -27,6 +27,8 @@
 
 #include "libavutil/avassert.h"
 #include "h264pred.h"
+#include "dsputil.h" // for ff_cropTbl
+#include "avcodec.h" // for AV_CODEC_ID_*
 
 #define BIT_DEPTH 8
 #include "h264pred_template.c"
@@ -406,7 +408,7 @@ static void pred8x8_tm_vp8_c(uint8_t *src, ptrdiff_t stride)
  * Set the intra prediction function pointers.
  */
 void ff_h264_pred_init(H264PredContext *h, int codec_id, const int bit_depth,
-                       const int chroma_format_idc)
+                       int chroma_format_idc)
 {
 //    MpegEncContext * const s = &h->s;
 
@@ -565,6 +567,9 @@ void ff_h264_pred_init(H264PredContext *h, int codec_id, const int bit_depth,
     }\
     h->pred16x16_add[VERT_PRED8x8]= FUNCC(pred16x16_vertical_add          , depth);\
     h->pred16x16_add[ HOR_PRED8x8]= FUNCC(pred16x16_horizontal_add        , depth);\
+
+    if(!chroma_format_idc)
+        chroma_format_idc = 1;
 
     switch (bit_depth) {
         case 9:

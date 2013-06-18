@@ -8,43 +8,37 @@ Legend:
 ! Fixed
 
 
-1.6.5 - not released yet
-========================
-+ Add a hotkey to open the subtitles downloader dialog
-+ Web server: various performance improvements
-+ VobSub subtitles can now also be loaded by selecting or draging and dropping the .sub file
-+ Ticket #439, External subtitles: support UTF8 without BOM
-+ Ticket #1617, Use MPC-HC's icon when registering the context menu entries
-+ Ticket #1673, FLAC Source: Basic support for embedded CUE sheet
-+ Ticket #1680, Add Greek translation
-+ Ticket #2425, Improve the remember file/DVD position feature: when a file/DVD that was already
-  in the list is reopened, it now goes at the top the list. This way files/DVDs that are often
-  used will stay in the list instead of being inexorably pushed out of it.
-+ Ticket #2647, Add .3ga to known formats
-+ Ticket #2712, MPC Video Decoder: Add the ability to force the interlaced flag
-* Updated FFmpeg (n0.8-15849-g5cd567c)
-* Updated MediaInfoLib to v0.7.61
-* Updated ZenLib to v0.4.28 r411
-* Updated Little CMS to v2.4 (git c606462)
-* Updated SoundTouch to v1.7.0 r160
-* Updated Basque, Czech, French, German, Russian, Simplified Chinese, Slovak
-  and Ukrainian translations
-! MpaDecFilter: updated CMixer, avoid possible memory leaks
-! API: CMD_PAUSE was acting as CMD_PLAY and vice versa
-! MPEG Splitter: Fix parsing of some malformed TS files
-! VSFilter (auto-loading version) wasn't loading on Windows 7
-! ISR/VSFilter: Fix high RAM usage with some complex subtitles
-! Ticket #376, Fix subtitles when switching from animated subs to non-animated subs.
-  The subtitles' timings were not correctly respected after switching from an
-  animated subtitles track to a non-animated subtitles track.
-! Ticket #1782, Correctly empty the "Recent" jump list when erasing the history
-  and ensure that no item is added to Windows recent documents menu or to the
-  "Recent" jump list when the history is disabled
-! Ticket #2537, #2554, Fix "Attempted an unsupported operation" error in the
-  Save dialogs on Vista and newer systems
-! Ticket #2572, FLAC Source: Fix playback for some files
-! Ticket #2619, FLV Splitter: PCM audio doesn't play
-! Ticket #2673, MPEG Splitter: Fix playback for some TS files
-! Ticket #2685, FLAC Source: Fix a crash with some corrupted file
-! Ticket #2699, Avi Splitter: Fix a potential crash with PCM tracks
-! Ticket #2703, Fix a crash that could happen when auto-loading some subtitles
+1.6.8 - 15 June 2013
+====================
++ DVB: Show the parental rating and the content type within the EPG information when available
++ Ticket #2872, Add support for DVB-T2 and improve channel switching (new options are available to
+  have a finer control on switching process)
++ Ticket #3179, DVB: Support EPG information for Freeview broadcast (UK DVB-T2)
+* Updated Basque, Czech, French, German, Greek, Japanese, Romanian, Russian,
+  Simplified / Traditional Chinese, Turkish and Ukrainian translations
+* Updated Little CMS to v2.5-rc1
+* Updated zlib to v1.2.8
+* Updated Unrar to v5.0.6
+* Updated MediaInfoLib to v0.7.63
+* Updated ZenLib to v0.4.29
+* Audio Switcher improvements:
+  - Ticket #1936, Improve the normalization algorithm to avoid huge volume variations
+  - Use percentage for the boost setting since it is easier to understand for most people
+  - Add a setting to change the max normalization factor and use a default max normalization
+    factor of 4 instead of 10
+* Ticket #2567, New About dialog with more detailed information and a "Copy to clipboard"
+  feature to ease support
+! PGS and DVB subtitles: Fix missing subtitles after resizing the window when using
+  the subpicture queue
+! Open dialog: if a URL was previously enterer in the "Open" or "Dub" fields an error message
+  was shown when clicking the "Browse" button
+! Vobsub files with language/title in their filenames weren't auto-loaded
+! Fix a memory leak: the memory consumption would increase noticeably until the file was closed
+  when the file had chapters and the chapter marks on seekbar were enabled
+! Capture mode: Fix reseting the renderer. When reseting the renderer in capture mode playback
+  was stopped and never restarted
+! Ticket #3110, DVB: Improve compatibility with some drivers for which MPC-HC failed to find
+  any channel during the channel scan
+! Ticket #3113, MPC-HC was sometimes slow to close (audio kept playing for a few seconds)
+! Ticket #3175, DVB: Changing the channel was exiting fullscreen or maximized mode
+! Ticket #3176, EVR renderers: Fix high CPU and memory usage when switching the user account

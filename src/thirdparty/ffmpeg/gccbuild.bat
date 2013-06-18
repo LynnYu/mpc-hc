@@ -1,5 +1,5 @@
 @ECHO OFF
-REM (C) 2009-2012 see Authors.txt
+REM (C) 2009-2013 see Authors.txt
 REM
 REM This file is part of MPC-HC.
 REM
@@ -43,32 +43,39 @@ SET ARG=%ARG:/=%
 SET ARG=%ARG:-=%
 SET ARGB=0
 SET ARGBC=0
+SET ARGCOMP=0
 SET ARGPL=0
 SET INPUT=0
+SET VALID=0
 
-IF /I "%ARG%" == "?"          GOTO ShowHelp
+IF /I "%ARG%" == "?"        GOTO ShowHelp
 
 FOR %%G IN (%ARG%) DO (
-  IF /I "%%G" == "help"       GOTO ShowHelp
-  IF /I "%%G" == "Build"      SET "BUILDTYPE=Build"   & SET /A ARGB+=1
-  IF /I "%%G" == "Clean"      SET "BUILDTYPE=Clean"   & SET /A ARGB+=1
-  IF /I "%%G" == "Rebuild"    SET "BUILDTYPE=Rebuild" & SET /A ARGB+=1
-  IF /I "%%G" == "Both"       SET "ARCH=Both"         & SET /A ARGPL+=1
-  IF /I "%%G" == "Win32"      SET "ARCH=x86"          & SET /A ARGPL+=1
-  IF /I "%%G" == "x86"        SET "ARCH=x86"          & SET /A ARGPL+=1
-  IF /I "%%G" == "x64"        SET "ARCH=x64"          & SET /A ARGPL+=1
-  IF /I "%%G" == "Debug"      SET "DEBUG=DEBUG=yes"   & SET /A ARGBC+=1
-  IF /I "%%G" == "Release"    SET "DEBUG= "           & SET /A ARGBC+=1
+  IF /I "%%G" == "help"     GOTO ShowHelp
+  IF /I "%%G" == "Build"    SET "BUILDTYPE=Build"   & SET /A ARGB+=1
+  IF /I "%%G" == "Clean"    SET "BUILDTYPE=Clean"   & SET /A ARGB+=1
+  IF /I "%%G" == "Rebuild"  SET "BUILDTYPE=Rebuild" & SET /A ARGB+=1
+  IF /I "%%G" == "Both"     SET "ARCH=Both"         & SET /A ARGPL+=1
+  IF /I "%%G" == "Win32"    SET "ARCH=x86"          & SET /A ARGPL+=1
+  IF /I "%%G" == "x86"      SET "ARCH=x86"          & SET /A ARGPL+=1
+  IF /I "%%G" == "x64"      SET "ARCH=x64"          & SET /A ARGPL+=1
+  IF /I "%%G" == "Debug"    SET "DEBUG=DEBUG=yes"   & SET /A ARGBC+=1
+  IF /I "%%G" == "Release"  SET "DEBUG= "           & SET /A ARGBC+=1
+  IF /I "%%G" == "VS2010"   SET "COMPILER=VS2010"   & SET /A ARGCOMP+=1
+  IF /I "%%G" == "VS2012"   SET "COMPILER=VS2012"   & SET /A ARGCOMP+=1
+  IF /I "%%G" == "Silent"   SET "SILENT=True"       & SET /A VALID+=1
+  IF /I "%%G" == "Nocolors" SET "NOCOLORS=True"     & SET /A VALID+=1
 )
 
 FOR %%X IN (%*) DO SET /A INPUT+=1
-SET /A VALID=%ARGB%+%ARGPL%+%ARGBC%
+SET /A VALID+=%ARGB%+%ARGPL%+%ARGBC%+%ARGCOMP%
 
 IF %VALID% NEQ %INPUT% GOTO UnsupportedSwitch
 
-IF %ARGB%  GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGB% == 0  (SET "BUILDTYPE=Build")
-IF %ARGPL% GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGPL% == 0 (SET "ARCH=Both")
-IF %ARGBC% GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGBC% == 0 (SET "DEBUG= ")
+IF %ARGB%    GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGB% == 0    (SET "BUILDTYPE=Build")
+IF %ARGPL%   GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGPL% == 0   (SET "ARCH=Both")
+IF %ARGBC%   GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGBC% == 0   (SET "DEBUG= ")
+IF %ARGCOMP% GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGCOMP% == 0 (SET "COMPILER=VS2010")
 
 IF /I "%ARCH%" == "Both" (
   SET "ARCH=x86" & CALL :Main
@@ -87,43 +94,45 @@ SET START_TIME=%TIME%
 SET START_DATE=%DATE%
 
 IF /I "%BUILDTYPE%" == "Rebuild" (
-  SET "BUILDTYPE=Clean" & CALL :SubMake %x64% %DEBUG% clean
+  SET "BUILDTYPE=Clean" & CALL :SubMake %x64% %DEBUG% %COMPILER%=yes clean
   CALL :SubCopyLibs
-  SET "BUILDTYPE=Build" & CALL :SubMake %x64% %DEBUG%
+  SET "BUILDTYPE=Build" & CALL :SubMake %x64% %DEBUG% %COMPILER%=yes
   SET "BUILDTYPE=Rebuild"
   EXIT /B
 )
 
-IF /I "%BUILDTYPE%" == "Clean" (CALL :SubMake %x64% %DEBUG% clean & EXIT /B)
+IF /I "%BUILDTYPE%" == "Clean" (CALL :SubMake %x64% %DEBUG% %COMPILER%=yes clean & EXIT /B)
 
 CALL :SubCopyLibs
-CALL :SubMake %x64% %DEBUG%
+CALL :SubMake %x64% %DEBUG% %COMPILER%=yes
 EXIT /B
 
 
 :End
-TITLE Compiling FFmpeg [FINISHED]
-
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+TITLE Compiling FFmpeg %COMPILER% [FINISHED]
 SET END_TIME=%TIME%
 CALL :SubGetDuration
-ECHO. & ECHO FFmpeg compilation took %DURATION%
-
+CALL :SubMsg "INFO" "FFmpeg compilation started on %START_DATE%-%START_TIME% and completed on %DATE%-%END_TIME% [%DURATION%]"
 POPD
 ENDLOCAL
 EXIT /B
 
 
 :SubMake
+IF %ERRORLEVEL% NEQ 0 EXIT /B
 IF DEFINED NUMBER_OF_PROCESSORS (SET JOBS=%NUMBER_OF_PROCESSORS%) ELSE (SET JOBS=4)
 IF /I "%BUILDTYPE%" == "Clean"  (SET JOBS=1)
 
 TITLE make -j%JOBS% %*
 ECHO make -j%JOBS% %*
 make.exe -j%JOBS% %*
+IF %ERRORLEVEL% NEQ 0 CALL :SubMsg "ERROR" "'make -j%JOBS% %*' - failed!"
 EXIT /B
 
 
 :SubCopyLibs
+IF %ERRORLEVEL% NEQ 0 EXIT /B
 REM Set the GCC version
 FOR /F "tokens=1,2 delims= " %%G IN ('gcc -dumpversion') DO (SET "gccver=%%G")
 
@@ -139,8 +148,7 @@ EXIT /B
 ECHO Not all build dependencies were found.
 ECHO.
 ECHO See "%ROOT_DIR%\docs\Compilation.txt" for more information.
-ENDLOCAL
-EXIT /B 1
+CALL :SubMsg "ERROR" "FFmpeg compilation failed!" & EXIT /B 1
 
 
 :UnsupportedSwitch
@@ -150,24 +158,58 @@ ECHO.
 ECHO "%~nx0 %*"
 ECHO.
 ECHO Run "%~nx0 help" for details about the commandline switches.
-ENDLOCAL
-EXIT /B 1
+CALL :SubMsg "ERROR" "FFmpeg compilation failed!" & EXIT /B 1
 
 
 :ShowHelp
 TITLE %~nx0 Help
 ECHO.
 ECHO Usage:
-ECHO %~nx0 [Clean^|Build^|Rebuild] [x86^|x64^|Both] [Debug^|Release]
+ECHO %~nx0 [Clean^|Build^|Rebuild] [x86^|x64^|Both] [Debug^|Release] [VS2010^|VS2012]
 ECHO.
 ECHO Notes: You can also prefix the commands with "-", "--" or "/".
 ECHO        The arguments are not case sensitive and can be ommitted.
 ECHO. & ECHO.
 ECHO Executing %~nx0 without any arguments will use the default ones:
-ECHO "%~nx0 Build Both Release"
+ECHO "%~nx0 Build Both Release VS2010"
 ECHO.
 POPD
 ENDLOCAL
+EXIT /B
+
+
+:SubMsg
+ECHO. & ECHO ------------------------------
+IF /I "%~1" == "ERROR" (
+  CALL :SubColorText "0C" "[%~1]" "%~2"
+) ELSE IF /I "%~1" == "INFO" (
+  CALL :SubColorText "0A" "[%~1]" "%~2"
+) ELSE IF /I "%~1" == "WARNING" (
+  CALL :SubColorText "0E" "[%~1]" "%~2"
+)
+ECHO ------------------------------ & ECHO.
+IF /I "%~1" == "ERROR" (
+  IF NOT DEFINED SILENT (
+    ECHO Press any key to exit...
+    PAUSE >NUL
+  )
+  POPD
+  ENDLOCAL
+  EXIT /B 1
+) ELSE (
+  EXIT /B
+)
+
+
+:SubColorText
+IF DEFINED NOCOLORS ECHO %~2 %~3 & EXIT /B
+FOR /F "tokens=1,2 delims=#" %%G IN (
+  '"PROMPT #$H#$E# & ECHO ON & FOR %%H IN (1) DO REM"') DO (
+  SET "DEL=%%G")
+<NUL SET /p ".=%DEL%" > "%~2"
+FINDSTR /v /a:%1 /R ".18" "%~2" NUL
+DEL "%~2" > NUL 2>&1
+ECHO  %~3
 EXIT /B
 
 

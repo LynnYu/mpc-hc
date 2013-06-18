@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -24,9 +24,10 @@
 #include <atlcoll.h>
 // TODO: remove this when it's fixed in MSVC
 // Work around warning C4005: 'XXXX' : macro redefinition
+#pragma warning(push)
 #pragma warning(disable: 4005)
 #include <stdint.h>
-#pragma warning(default: 4005)
+#pragma warning(pop)
 
 #include "../../../DeCSS/DeCSSInputPin.h"
 #include "IMpaDecFilter.h"
@@ -99,6 +100,12 @@ protected:
     ps2_state_t     m_ps2_state;
     DD_stats_t      m_DDstats;
 
+    BYTE            m_hdmibuff[61440];
+    int             m_hdmicount;
+    int             m_hdmisize;
+    int             m_truehd_samplerate;
+    int             m_truehd_framelength;
+
 #if defined(STANDALONE_FILTER) || HAS_FFMPEG_AUDIO_DECODERS
     CFFAudioDecoder m_FFAudioDec;
 
@@ -112,6 +119,8 @@ protected:
 #if defined(STANDALONE_FILTER) || INTERNAL_DECODER_AC3
     HRESULT ProcessAC3();
     HRESULT ProcessAC3_SPDIF();
+    HRESULT ProcessEAC3_SPDIF();
+    HRESULT ProcessTrueHD_SPDIF();
 #endif
 #if defined(STANDALONE_FILTER) || INTERNAL_DECODER_DTS
     HRESULT ProcessDTS_SPDIF();
@@ -130,10 +139,11 @@ protected:
 
     HRESULT GetDeliveryBuffer(IMediaSample** pSample, BYTE** pData);
     HRESULT Deliver(BYTE* pBuff, int size, AVSampleFormat avsf, DWORD nSamplesPerSec, WORD nChannels, DWORD dwChannelMask = 0);
-    HRESULT DeliverBitstream(BYTE* pBuff, int size, int sample_rate, int frame_length, BYTE type);
+    HRESULT DeliverBitstream(BYTE* pBuff, int size, WORD type, int sample_rate, int frame_length);
     HRESULT ReconnectOutput(int nSamples, CMediaType& mt);
     CMediaType CreateMediaType(MPCSampleFormat sf, DWORD nSamplesPerSec, WORD nChannels, DWORD dwChannelMask = 0);
     CMediaType CreateMediaTypeSPDIF(DWORD nSamplesPerSec = 48000);
+    CMediaType CreateMediaTypeHDMI(WORD type);
 
 public:
     CMpaDecFilter(LPUNKNOWN lpunk, HRESULT* phr);
@@ -167,7 +177,7 @@ public:
 
     STDMETHODIMP SetSampleFormat(MPCSampleFormat sf, bool enable);
     STDMETHODIMP_(bool) GetSampleFormat(MPCSampleFormat sf);
-    STDMETHODIMP_(MPCSampleFormat) GetSampleFormat2();
+    STDMETHODIMP_(MPCSampleFormat) SelectSampleFormat(MPCSampleFormat sf);
     STDMETHODIMP SetMixer(bool fMixer);
     STDMETHODIMP_(bool) GetMixer();
     STDMETHODIMP SetMixerLayout(int sc);

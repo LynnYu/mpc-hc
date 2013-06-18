@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -20,16 +20,21 @@
 
 
 #include "stdafx.h"
+#include "mpc-hc_config.h"
 #include "version.h"
 #include "UpdateChecker.h"
 #include "UpdateCheckerDlg.h"
 #include "SettingsDefines.h"
 #include "mplayerc.h"
+#include "SysVersion.h"
 
 #include <afxinet.h>
 
 const Version UpdateChecker::MPC_HC_VERSION = { MPC_VERSION_NUM };
-const LPCTSTR UpdateChecker::MPC_HC_UPDATE_URL = _T("http://mpc-hc.sourceforge.net/version.txt");
+const LPCTSTR UpdateChecker::MPC_HC_UPDATE_URL = UPDATE_URL;
+
+bool UpdateChecker::bIsCheckingForUpdate = false;
+CCritSec UpdateChecker::csIsCheckingForUpdate;
 
 UpdateChecker::UpdateChecker(CString versionFileURL)
     : versionFileURL(versionFileURL)
@@ -47,11 +52,31 @@ Update_Status UpdateChecker::IsUpdateAvailable(const Version& currentVersion)
 
     try {
         CInternetSession internet;
+
+        OSVERSIONINFOEX osVersion = SysVersion::GetFullVersion();
+        CString osVersionStr;
+        osVersionStr.Format(_T("Windows %1u.%1u"), osVersion.dwMajorVersion, osVersion.dwMinorVersion);
+        if (SysVersion::Is64Bit()) {
+            osVersionStr += _T(" x64");
+        }
+
+        LPCTSTR headersFmt = _T("User-Agent: MPC-HC")
+#ifdef _WIN64
+                             _T(" (64-bit)")
+#endif
+#ifdef MPCHC_LITE
+                             _T(" Lite")
+#endif
+                             _T(" (%s)/") MPC_VERSION_STR_FULL _T("\r\n");
+
+        CString headers;
+        headers.Format(headersFmt, osVersionStr);
+
         CHttpFile* versionFile = (CHttpFile*) internet.OpenURL(versionFileURL,
                                  1,
                                  INTERNET_FLAG_TRANSFER_ASCII | INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD,
-                                 NULL,
-                                 0);
+                                 headers,
+                                 -1);
 
         if (versionFile) {
             CString latestVersionStr;
@@ -66,7 +91,7 @@ Update_Status UpdateChecker::IsUpdateAvailable(const Version& currentVersion)
             if (!ParseVersion(latestVersionStr, latestVersion)) {
                 updateAvailable = UPDATER_ERROR;
             } else {
-                time_t lastCheck = time(NULL);
+                time_t lastCheck = time(nullptr);
                 AfxGetApp()->WriteProfileBinary(IDS_R_SETTINGS, IDS_RS_UPDATER_LAST_CHECK, (LPBYTE)&lastCheck, sizeof(time_t));
 
                 int comp = CompareVersion(currentVersion, latestVersion);
@@ -86,6 +111,7 @@ Update_Status UpdateChecker::IsUpdateAvailable(const Version& currentVersion)
                 }
             }
 
+            versionFile->Close(); // Close() isn't called by the destructor
             delete versionFile;
         } else {
             updateAvailable = UPDATER_ERROR;
@@ -181,7 +207,7 @@ bool UpdateChecker::IsAutoUpdateEnabled()
 
 bool UpdateChecker::IsTimeToAutoUpdate()
 {
-    time_t* lastCheck = NULL;
+    time_t* lastCheck = nullptr;
     UINT nRead;
 
     if (!AfxGetApp()->GetProfileBinary(IDS_R_SETTINGS, IDS_RS_UPDATER_LAST_CHECK, (LPBYTE*)&lastCheck, &nRead) || nRead != sizeof(time_t)) {
@@ -192,7 +218,7 @@ bool UpdateChecker::IsTimeToAutoUpdate()
         return true;
     }
 
-    bool isTimeToAutoUpdate = (time(NULL) >= *lastCheck + AfxGetAppSettings().nUpdaterDelay * 24 * 3600);
+    bool isTimeToAutoUpdate = (time(nullptr) >= *lastCheck + AfxGetAppSettings().nUpdaterDelay * 24 * 3600);
 
     delete [] lastCheck;
 
@@ -217,10 +243,17 @@ static UINT RunCheckForUpdateThread(LPVOID pParam)
         }
     }
 
+    UpdateChecker::bIsCheckingForUpdate = false;
+
     return 0;
 }
 
 void UpdateChecker::CheckForUpdate(bool autoCheck /*= false*/)
 {
-    AfxBeginThread(RunCheckForUpdateThread, (LPVOID)autoCheck);
+    CAutoLock lock(&csIsCheckingForUpdate);
+
+    if (!bIsCheckingForUpdate) {
+        bIsCheckingForUpdate = true;
+        AfxBeginThread(RunCheckForUpdateThread, (LPVOID)autoCheck);
+    }
 }

@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -39,8 +39,8 @@
 
 CDeCSSInputPin::CDeCSSInputPin(TCHAR* pObjectName, CTransformFilter* pFilter, HRESULT* phr, LPWSTR pName)
     : CTransformInputPin(pObjectName, pFilter, phr, pName)
+    , m_varient(-1)
 {
-    m_varient = -1;
     memset(m_Challenge, 0, sizeof(m_Challenge));
     memset(m_KeyCheck, 0, sizeof(m_KeyCheck));
     memset(m_DiscKey, 0, sizeof(m_DiscKey));
@@ -62,7 +62,7 @@ STDMETHODIMP CDeCSSInputPin::Receive(IMediaSample* pSample)
 {
     long len = pSample->GetActualDataLength();
 
-    BYTE* p = NULL;
+    BYTE* p = nullptr;
     if (SUCCEEDED(pSample->GetPointer(&p)) && len > 0) {
         if (m_mt.majortype == MEDIATYPE_DVD_ENCRYPTED_PACK && len == 2048 && (p[0x14] & 0x30)) {
             CSSdescramble(p, m_TitleKey);
@@ -90,7 +90,7 @@ void CDeCSSInputPin::StripPacket(BYTE*& p, long& len)
 {
     GUID majortype = m_mt.majortype;
 
-    if (majortype == MEDIATYPE_MPEG2_PACK || majortype == MEDIATYPE_DVD_ENCRYPTED_PACK)
+    if (majortype == MEDIATYPE_MPEG2_PACK || majortype == MEDIATYPE_DVD_ENCRYPTED_PACK) {
         if (len > 0 && *(DWORD*)p == 0xba010000) { // MEDIATYPE_*_PACK
             len -= 14;
             p += 14;
@@ -100,8 +100,9 @@ void CDeCSSInputPin::StripPacket(BYTE*& p, long& len)
             }
             majortype = MEDIATYPE_MPEG2_PES;
         }
+    }
 
-    if (majortype == MEDIATYPE_MPEG2_PES)
+    if (majortype == MEDIATYPE_MPEG2_PES) {
         if (len > 0 && *(DWORD*)p == 0xbb010000) {
             len -= 4;
             p += 4;
@@ -110,7 +111,6 @@ void CDeCSSInputPin::StripPacket(BYTE*& p, long& len)
             p += hdrlen;
         }
 
-    if (majortype == MEDIATYPE_MPEG2_PES)
         if (len > 0
                 && ((*(DWORD*)p & 0xf0ffffff) == 0xe0010000
                     || (*(DWORD*)p & 0xe0ffffff) == 0xc0010000
@@ -170,10 +170,11 @@ void CDeCSSInputPin::StripPacket(BYTE*& p, long& len)
             }
 
             if (expected > 0) {
-                expected -= (p - p0);
+                expected -= (int)(p - p0);
                 len = min(expected, len);
             }
         }
+    }
 
     if (len < 0) {
         ASSERT(0);

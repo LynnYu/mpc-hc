@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2007-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -75,7 +75,6 @@ void CDXVADecoderH264::Init()
         m_DXVAPicParams.RefFrameList[i].bPicEntry = 255;
         m_DXVAPicParams.RefFrameList[i].Index7Bits = 127;
     }
-
 
     m_nNALLength = 4;
     m_nMaxSlices = 0;
@@ -229,33 +228,33 @@ HRESULT CDXVADecoderH264::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME 
         return S_FALSE;
     }
 
-/* Disabled, because that causes serious problems.
-    // Some magic code for detecting the incorrect decoding of interlaced frames ...
-    // TODO : necessary to make it better, and preferably on the side of ffmpeg ...
-    if (m_nfield_pic_flag && m_nfield_pic_flag == m_DXVAPicParams.field_pic_flag && m_nRefPicFlag == m_DXVAPicParams.RefPicFlag) {
-        if (m_nPrevOutPOC == m_nOutPOC && m_nOutPOC == INT_MIN) {
-            m_nBrokenFramesFlag_POC++;
-        }
-        m_nBrokenFramesFlag++;
-    } else {
-        m_nBrokenFramesFlag     = 0;
-        m_nBrokenFramesFlag_POC = 0;
-    }
-    m_nfield_pic_flag   = m_DXVAPicParams.field_pic_flag;
-    m_nRefPicFlag       = m_DXVAPicParams.RefPicFlag;
-    m_nPrevOutPOC       = m_nOutPOC;
-
-    if (m_nBrokenFramesFlag > 4) {
-        m_nBrokenFramesFlag = 0;
-        if (m_nBrokenFramesFlag_POC > 1) {
-            TRACE_H264("CDXVADecoderH264::DecodeFrame() : Detected broken frames ... flush data\n");
+    /* Disabled, because that causes serious problems.
+        // Some magic code for detecting the incorrect decoding of interlaced frames ...
+        // TODO : necessary to make it better, and preferably on the side of ffmpeg ...
+        if (m_nfield_pic_flag && m_nfield_pic_flag == m_DXVAPicParams.field_pic_flag && m_nRefPicFlag == m_DXVAPicParams.RefPicFlag) {
+            if (m_nPrevOutPOC == m_nOutPOC && m_nOutPOC == INT_MIN) {
+                m_nBrokenFramesFlag_POC++;
+            }
+            m_nBrokenFramesFlag++;
+        } else {
+            m_nBrokenFramesFlag     = 0;
             m_nBrokenFramesFlag_POC = 0;
-            Flush();
-            return S_FALSE;
         }
-    }
-    //
-*/
+        m_nfield_pic_flag   = m_DXVAPicParams.field_pic_flag;
+        m_nRefPicFlag       = m_DXVAPicParams.RefPicFlag;
+        m_nPrevOutPOC       = m_nOutPOC;
+
+        if (m_nBrokenFramesFlag > 4) {
+            m_nBrokenFramesFlag = 0;
+            if (m_nBrokenFramesFlag_POC > 1) {
+                TRACE_H264("CDXVADecoderH264::DecodeFrame() : Detected broken frames ... flush data\n");
+                m_nBrokenFramesFlag_POC = 0;
+                Flush();
+                return S_FALSE;
+            }
+        }
+        //
+    */
 
     CHECK_HR_TRACE(GetFreeSurfaceIndex(nSurfaceIndex, &pSampleToDeliver, rtStart, rtStop));
     FFH264SetCurrentPicture(nSurfaceIndex, &m_DXVAPicParams, m_pFilter->GetAVCtx());
@@ -336,7 +335,7 @@ void CDXVADecoderH264::SetExtraData(BYTE* pDataIn, UINT nSize)
     AVCodecContext* pAVCtx = m_pFilter->GetAVCtx();
     m_nNALLength = pAVCtx->nal_length_size;
 
-    FFH264DecodeBuffer(pAVCtx, pDataIn, nSize, NULL, NULL, NULL);
+    FFH264DecodeBuffer(pAVCtx, pDataIn, nSize, nullptr, nullptr, nullptr);
     FFH264SetDxvaSliceLong(pAVCtx, m_pSliceLong);
 }
 

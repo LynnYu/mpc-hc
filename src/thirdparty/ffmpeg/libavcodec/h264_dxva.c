@@ -1,5 +1,5 @@
 /*
- * (C) 2008-2012 see Authors.txt
+ * (C) 2008-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -19,7 +19,7 @@
  */
 
 #include <Windows.h>
-#include <dxva.h>
+#include "libavcodec/dxva.h"
 
 
 static void fill_dxva_slice_long(H264Context *h)
@@ -284,7 +284,7 @@ static int field_end_noexecute(H264Context *h)
     int err = 0;
     s->mb_y = 0;
 
-    if (!s->dropable) {
+    if (!s->droppable) {
         err = ff_h264_execute_ref_pic_marking(h, h->mmco, h->mmco_index);
         h->prev_poc_msb     = h->poc_msb;
         h->prev_poc_lsb     = h->poc_lsb;
@@ -310,15 +310,8 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
     int default_ref_list_done = 0;
     int last_pic_structure, last_pic_dropable;
 
-    /* FIXME: 2tap qpel isn't implemented for high bit depth. */
-    if ((s->avctx->flags2 & CODEC_FLAG2_FAST) &&
-            !h->nal_ref_idc && !h->pixel_shift) {
-        s->me.qpel_put = s->dsp.put_2tap_qpel_pixels_tab;
-        s->me.qpel_avg = s->dsp.avg_2tap_qpel_pixels_tab;
-    } else {
-        s->me.qpel_put = s->dsp.put_h264_qpel_pixels_tab;
-        s->me.qpel_avg = s->dsp.avg_h264_qpel_pixels_tab;
-    }
+    s->me.qpel_put = h->h264qpel.put_h264_qpel_pixels_tab;
+    s->me.qpel_avg = h->h264qpel.avg_h264_qpel_pixels_tab;
 
     // ==> Start patch MPC DXVA
     h->first_mb_in_slice = get_ue_golomb_long(&s->gb);
@@ -333,7 +326,7 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
 
         h0->current_slice = 0;
         if (!s0->first_field) {
-            if (s->current_picture_ptr && !s->dropable &&
+            if (s->current_picture_ptr && !s->droppable &&
                     s->current_picture_ptr->owner2 == s) {
                 ff_thread_report_progress(&s->current_picture_ptr->f, INT_MAX,
                                           s->picture_structure == PICT_BOTTOM_FIELD);
@@ -504,8 +497,8 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
     h->mb_mbaff        = 0;
     h->mb_aff_frame    = 0;
     last_pic_structure = s0->picture_structure;
-    last_pic_dropable  = s->dropable;
-    s->dropable        = h->nal_ref_idc == 0;
+    last_pic_dropable  = s->droppable;
+    s->droppable        = h->nal_ref_idc == 0;
     if (h->sps.frame_mbs_only_flag) {
         s->picture_structure = PICT_FRAME;
     } else {
@@ -524,12 +517,12 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
 
     if (h0->current_slice != 0) {
         if (last_pic_structure != s->picture_structure ||
-            last_pic_dropable  != s->dropable) {
+            last_pic_dropable  != s->droppable) {
             av_log(h->s.avctx, AV_LOG_ERROR,
                    "Changing field mode (%d -> %d) between slices is not allowed\n",
                    last_pic_structure, s->picture_structure);
             s->picture_structure = last_pic_structure;
-            s->dropable          = last_pic_dropable;
+            s->droppable          = last_pic_dropable;
             return AVERROR_INVALIDDATA;
         }
     } else {
@@ -595,14 +588,14 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
                                "Invalid field mode combination %d/%d\n",
                                last_pic_structure, s->picture_structure);
                         s->picture_structure = last_pic_structure;
-                        s->dropable          = last_pic_dropable;
+                        s->droppable          = last_pic_dropable;
                         return AVERROR_INVALIDDATA;
-                    } else if (last_pic_dropable != s->dropable) {
+                    } else if (last_pic_dropable != s->droppable) {
                         av_log(s->avctx, AV_LOG_ERROR,
                                "Cannot combine reference and non-reference fields in the same frame\n");
                         av_log_ask_for_sample(s->avctx, NULL);
                         s->picture_structure = last_pic_structure;
-                        s->dropable          = last_pic_dropable;
+                        s->droppable          = last_pic_dropable;
                         return AVERROR_INVALIDDATA;
                     }
 
@@ -629,7 +622,7 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
             s->current_picture_ptr->frame_num = h->prev_frame_num;
             ff_thread_report_progress(&s->current_picture_ptr->f, INT_MAX, 0);
             ff_thread_report_progress(&s->current_picture_ptr->f, INT_MAX, 1);
-            ff_generate_sliding_window_mmcos(h);
+            ff_generate_sliding_window_mmcos(h, 1);
             if (ff_h264_execute_ref_pic_marking(h, h->mmco, h->mmco_index) < 0 &&
                     (s->avctx->err_recognition & AV_EF_EXPLODE))
                 return AVERROR_INVALIDDATA;
@@ -805,7 +798,10 @@ int decode_slice_header_noexecute(H264Context *h, H264Context *h0)
         }
     }
 
-    if (h->nal_ref_idc && ff_h264_decode_ref_pic_marking(h0, &s->gb) < 0 &&
+    if (h->nal_ref_idc &&
+        ff_h264_decode_ref_pic_marking(h0, &s->gb,
+                            !(s->avctx->active_thread_type & FF_THREAD_FRAME) ||
+                            h0->current_slice == 0) < 0 &&
         (s->avctx->err_recognition & AV_EF_EXPLODE))
         return AVERROR_INVALIDDATA;
 

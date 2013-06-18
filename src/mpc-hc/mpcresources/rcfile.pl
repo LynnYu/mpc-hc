@@ -1,6 +1,6 @@
 #/bin/perl
 #
-# (C) 2010-2012 see Authors.txt
+# (C) 2010-2013 see Authors.txt
 #
 # This file is part of MPC-HC.
 #
@@ -76,8 +76,9 @@ my ($NewDialogs, $NewMenus, $NewStrings, @NewOutline) = ({}, {}, {}, ());
 my ($MenuDiffs, $DialogDiffs) = ({}, {});
 my ($BaseDesignInfo, $NewDesignInfo) = ({}, {});
 
-my @BaseFile = readFile($BaseFileName, 1);
-my @NewFile = readFile($NewFileName, 1);
+# /!\ Note that the English RC file is ASCII encoded
+my @BaseFile = readFile($BaseFileName, 0);
+my @NewFile = readFile($NewFileName, 0);
 print "Scanning changes between baseline file and new version...\n\n";
 getDifference();
 
@@ -103,7 +104,7 @@ if (!-e "newrc") {
 
 foreach my $filename(@FileLists) {
     print "Analyzing locale file: $filename...\n";
-    my @oldrcfile = readFile($filename, 1);
+    my @oldrcfile = readFile($filename, 2);
     my ($curDialogs, $curMenus, $curStrings, @curOutline) = ({}, {}, {}, ());
     my @curVersionInfo = ();
     my $curDesignInfo = {};
@@ -171,7 +172,7 @@ sub writeData {
             if ($idx == $headsection) {
                 push(@{$newrc}, @{$curOutline->[0][1]});            # use old language rc file head section
             } elsif ($idx == $tailsection) {
-                writeVersionInfo($newrc, $curVersionInfo);          # TODO: write current version info to it's original place, now just above end section
+                writeVersionInfo($newrc, $curVersionInfo);          # TODO: write current version info to its original place, now just above end section
                 push(@{$newrc}, @{$curOutline->[$oldtail][1]});     # use old language rc file head section
             } else {
                 my @_text = ();

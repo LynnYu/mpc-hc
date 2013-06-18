@@ -1,6 +1,5 @@
 /*
- * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2008-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -21,12 +20,14 @@
 
 #pragma once
 
-#pragma pack(1)
+// TODO: remove this when it's fixed in MSVC
+// Work around warning C4005: 'XXXX' : macro redefinition
+#pragma warning(push)
+#pragma warning(disable: 4005)
+#include <stdint.h>
+#pragma warning(pop)
 
-
-typedef unsigned __int8   uint8_t;
-typedef unsigned __int16  uint16_t;
-typedef unsigned __int32  uint32_t;
+#pragma pack(push, 1)
 
 
 class CIfo
@@ -54,7 +55,7 @@ private:
         uint8_t frame_u;        // The two high bits are the frame rate.
     } dvd_time_t;
 
-    typedef uint8_t  command_data_t[8];
+    typedef uint8_t command_data_t[8];
 #define COMMAND_DATA_SIZE 8
 
     typedef struct {            // PGC Command Table
@@ -76,11 +77,11 @@ private:
         uint8_t still_time;
         uint8_t cell_cmd;
 
-        dvd_time_t playback_time;
-        uint32_t vobu_start;    // 1st vobu start
-        uint32_t ilvu_end;
-        uint32_t vobu_last_start;
-        uint32_t vobu_last_end;
+        dvd_time_t  playback_time;
+        uint32_t    vobu_start;    // 1st vobu start
+        uint32_t    ilvu_end;
+        uint32_t    vobu_last_start;
+        uint32_t    vobu_last_end;
     } ifo_pgci_caddr_t;
 
     typedef struct {                // Cell Position Information
@@ -100,7 +101,7 @@ private:
     } clut_t;
 #endif
 
-    typedef struct {        // Audio Status
+    typedef struct {            // Audio Status
 #if BYTE_ORDER == BIG_ENDIAN
         uint8_t available   : 1;
         uint8_t link        : 7;
@@ -108,11 +109,11 @@ private:
         uint8_t link        : 7;
         uint8_t available   : 1;
 #endif
-        uint8_t foo     : 8; // UNKNOWN
+        uint8_t foo     : 8;    // UNKNOWN
     } audio_status_t;
 
 
-    typedef struct {        // Subpicture status
+    typedef struct {            // Subpicture status
 #if BYTE_ORDER == BIG_ENDIAN
         uint8_t available   : 1;
         uint8_t format4_3   : 7;
@@ -126,24 +127,24 @@ private:
     } subp_status_t;
 
 
-    typedef struct {        // Program Chain Information
-        uint16_t zero_1;
-        uint8_t  nr_of_programs;
-        uint8_t  nr_of_cells;
-        dvd_time_t playback_time;
-        uint32_t prohibited_ops;    // New type?
-        audio_status_t audio_status[8];
-        subp_status_t subp_status[32];
-        uint16_t next_pgc_nr;
-        uint16_t prev_pgc_nr;
-        uint16_t goup_pgc_nr;
-        uint8_t  still_time;
-        uint8_t  pg_playback_mode;
-        clut_t   clut[16];
-        uint16_t pgc_command_tbl_offset;
-        uint16_t pgc_program_map_offset;
-        uint16_t cell_playback_tbl_offset;
-        uint16_t cell_position_tbl_offset;
+    typedef struct {            // Program Chain Information
+        uint16_t        zero_1;
+        uint8_t         nr_of_programs;
+        uint8_t         nr_of_cells;
+        dvd_time_t      playback_time;
+        uint32_t        prohibited_ops;    // New type?
+        audio_status_t  audio_status[8];
+        subp_status_t   subp_status[32];
+        uint16_t        next_pgc_nr;
+        uint16_t        prev_pgc_nr;
+        uint16_t        goup_pgc_nr;
+        uint8_t         still_time;
+        uint8_t         pg_playback_mode;
+        clut_t          clut[16];
+        uint16_t        pgc_command_tbl_offset;
+        uint16_t        pgc_program_map_offset;
+        uint16_t        cell_playback_tbl_offset;
+        uint16_t        cell_position_tbl_offset;
         pgc_command_tbl_t* pgc_command_tbl;
         pgc_program_map_t* pgc_program_map;
         ifo_pgci_caddr_t*  cell_playback_tbl;
@@ -187,3 +188,4 @@ private:
     int         GetMiscPGCI(ifo_hdr_t* hdr, int title, uint8_t** ptr);
     void        RemovePgciUOPs(uint8_t* ptr);
 };
+#pragma pack(pop)

@@ -1,21 +1,8 @@
-// File_Aac - Info for AAC (Raw) files
-// Copyright (C) 2008-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // Pre-compilation
@@ -228,6 +215,9 @@ void File_Aac::Read_Buffer_Continue()
     if (Element_Size==0)
         return;
 
+    if (Frame_Count==0)
+        PTS_Begin=FrameInfo.PTS;
+
     switch(Mode)
     {
         case Mode_AudioSpecificConfig : Read_Buffer_Continue_AudioSpecificConfig(); break;
@@ -324,6 +314,10 @@ bool File_Aac::Synchronize_ADTS()
                 break;
             if (File_Offset+Buffer_Offset+aac_frame_length!=File_Size-File_EndTagSize)
             {
+                //Padding
+                while (Buffer_Offset+aac_frame_length+2<=Buffer_Size && Buffer[Buffer_Offset+aac_frame_length]==0x00)
+                    aac_frame_length++;
+
                 if (Buffer_Offset+aac_frame_length+2>Buffer_Size)
                     return false; //Need more data
 
@@ -336,6 +330,10 @@ bool File_Aac::Synchronize_ADTS()
                     int16u aac_frame_length2=(CC3(Buffer+Buffer_Offset+aac_frame_length+3)>>5)&0x1FFF;
                     if (File_Offset+Buffer_Offset+aac_frame_length+aac_frame_length2!=File_Size-File_EndTagSize)
                     {
+                        //Padding
+                        while (Buffer_Offset+aac_frame_length+aac_frame_length2+2<=Buffer_Size && Buffer[Buffer_Offset+aac_frame_length+aac_frame_length2]==0x00)
+                            aac_frame_length2++;
+
                         if (Buffer_Offset+aac_frame_length+aac_frame_length2+2>Buffer_Size)
                             return false; //Need more data
 
@@ -348,6 +346,10 @@ bool File_Aac::Synchronize_ADTS()
                             int16u aac_frame_length3=(CC3(Buffer+Buffer_Offset+aac_frame_length+aac_frame_length2+3)>>5)&0x1FFF;
                             if (File_Offset+Buffer_Offset+aac_frame_length+aac_frame_length2+aac_frame_length3!=File_Size-File_EndTagSize)
                             {
+                                //Padding
+                                while (Buffer_Offset+aac_frame_length+aac_frame_length2+aac_frame_length3+2<=Buffer_Size && Buffer[Buffer_Offset+aac_frame_length+aac_frame_length2+aac_frame_length3]==0x00)
+                                    aac_frame_length3++;
+
                                 if (Buffer_Offset+aac_frame_length+aac_frame_length2+aac_frame_length3+2>Buffer_Size)
                                     return false; //Need more data
 
@@ -471,6 +473,10 @@ bool File_Aac::Synched_Test_ADTS()
     //Tags
     if (!File__Tags_Helper::Synched_Test())
         return false;
+
+    //Null padding
+    while (Buffer_Offset+2<=Buffer_Size && Buffer[Buffer_Offset]==0x00)
+        Buffer_Offset++;
 
     //Must have enough buffer for having header
     if (Buffer_Offset+2>Buffer_Size)
@@ -652,7 +658,8 @@ void File_Aac::Data_Parse()
                 case Mode_LATM        :
                                         Fill();
                                         if (!IsSub)
-                                            File__Tags_Helper::Finish(); break;
+                                            File__Tags_Helper::Finish();
+                                        break;
                 default               : ; //No header
             }
 

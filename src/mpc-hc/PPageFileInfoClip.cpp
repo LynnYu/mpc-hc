@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -40,7 +40,7 @@ CPPageFileInfoClip::CPPageFileInfoClip(CString fn, IFilterGraph* pFG)
     , m_copyright(ResStr(IDS_AG_NONE))
     , m_rating(ResStr(IDS_AG_NONE))
     , m_location_str(ResStr(IDS_AG_NONE))
-    , m_hIcon(NULL)
+    , m_hIcon(nullptr)
 {
 }
 
@@ -97,11 +97,11 @@ BOOL CPPageFileInfoClip::OnInitDialog()
 {
     __super::OnInitDialog();
 
-    if (m_fn == _T("")) {
+    if (m_fn.IsEmpty()) {
         BeginEnumFilters(m_pFG, pEF, pBF) {
             CComQIPtr<IFileSourceFilter> pFSF = pBF;
             if (pFSF) {
-                LPOLESTR pFN = NULL;
+                LPOLESTR pFN = nullptr;
                 AM_MEDIA_TYPE mt;
                 if (SUCCEEDED(pFSF->GetCurFile(&pFN, &mt)) && pFN && *pFN) {
                     m_fn = CStringW(pFN);
@@ -134,26 +134,31 @@ BOOL CPPageFileInfoClip::OnInitDialog()
     BeginEnumFilters(m_pFG, pEF, pBF) {
         if (CComQIPtr<IAMMediaContent, &IID_IAMMediaContent> pAMMC = pBF) {
             CComBSTR bstr;
-            if (SUCCEEDED(pAMMC->get_Title(&bstr)) && wcslen(bstr.m_str) > 0) {
+            if (SUCCEEDED(pAMMC->get_Title(&bstr)) && bstr.Length()) {
                 m_clip = bstr.m_str;
                 fEmpty = false;
             }
-            if (SUCCEEDED(pAMMC->get_AuthorName(&bstr)) && wcslen(bstr.m_str) > 0) {
+            bstr.Empty();
+            if (SUCCEEDED(pAMMC->get_AuthorName(&bstr)) && bstr.Length()) {
                 m_author = bstr.m_str;
                 fEmpty = false;
             }
-            if (SUCCEEDED(pAMMC->get_Copyright(&bstr)) && wcslen(bstr.m_str) > 0) {
+            bstr.Empty();
+            if (SUCCEEDED(pAMMC->get_Copyright(&bstr)) && bstr.Length()) {
                 m_copyright = bstr.m_str;
                 fEmpty = false;
             }
-            if (SUCCEEDED(pAMMC->get_Rating(&bstr)) && wcslen(bstr.m_str) > 0) {
+            bstr.Empty();
+            if (SUCCEEDED(pAMMC->get_Rating(&bstr)) && bstr.Length()) {
                 m_rating = bstr.m_str;
                 fEmpty = false;
             }
-            if (SUCCEEDED(pAMMC->get_Description(&bstr)) && wcslen(bstr.m_str) > 0) {
+            bstr.Empty();
+            if (SUCCEEDED(pAMMC->get_Description(&bstr)) && bstr.Length()) {
                 m_desc.SetWindowText(CString(bstr.m_str));
                 fEmpty = false;
             }
+            bstr.Empty();
             if (!fEmpty) {
                 break;
             }

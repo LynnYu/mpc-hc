@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2009-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -18,7 +18,7 @@
  *
  */
 
-// PPageTuner.cpp : implementation file
+// PPageCapture.cpp : implementation file
 //
 
 #include "stdafx.h"
@@ -310,10 +310,33 @@ void CPPageCapture::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_COMBO5, m_cbDigitalTuner);
     DDX_Control(pDX, IDC_COMBO3, m_cbDigitalReceiver);
     DDX_Radio(pDX, IDC_RADIO1, m_iDefaultDevice);
+    DDX_Control(pDX, IDC_COMBO6, m_cbRebuildFilterGraph);
+    DDX_Control(pDX, IDC_COMBO7, m_cbStopFilterGraph);
 }
 
 
 BEGIN_MESSAGE_MAP(CPPageCapture, CPPageBase)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO1, OnUpdateAnalog)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO2, OnUpdateAnalog)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO9, OnUpdateAnalog)
+    ON_UPDATE_COMMAND_UI(IDC_STATIC1, OnUpdateAnalog)
+    ON_UPDATE_COMMAND_UI(IDC_STATIC2, OnUpdateAnalog)
+    ON_UPDATE_COMMAND_UI(IDC_STATIC3, OnUpdateAnalog)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO4, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO5, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_STATIC4, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_STATIC5, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO3, OnUpdateDigitalReciver)
+    ON_UPDATE_COMMAND_UI(IDC_STATIC6, OnUpdateDigitalReciver)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO6, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_COMBO7, OnUpdateDigitalStopFilterGraph)
+    ON_UPDATE_COMMAND_UI(IDC_CHECK1, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_PPAGECAPTURE_ST10, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_PPAGECAPTURE_ST11, OnUpdateDigital)
+    ON_UPDATE_COMMAND_UI(IDC_PPAGECAPTURE_ST12, OnUpdateDigitalStopFilterGraph)
+    ON_UPDATE_COMMAND_UI(IDC_PPAGECAPTURE_DESC1, OnUpdateDigital)
+    ON_CBN_SELCHANGE(IDC_COMBO6, &CPPageCapture::OnCbnSelchangeRebuildFilterGraph)
+    ON_CBN_SELCHANGE(IDC_COMBO7, &CPPageCapture::OnCbnSelchangeStopFilterGraph)
 END_MESSAGE_MAP()
 
 
@@ -330,11 +353,76 @@ BOOL CPPageCapture::OnInitDialog()
     FindAnalogDevices();
     FindDigitalDevices();
 
-    m_iDefaultDevice = s.iDefaultCaptureDevice;
-
+    if (m_cbAnalogVideo.GetCount() && m_cbDigitalTuner.GetCount()) {
+        m_iDefaultDevice = s.iDefaultCaptureDevice;
+    } else if (m_cbAnalogVideo.GetCount()) {
+        m_iDefaultDevice =  0;
+        GetDlgItem(IDC_RADIO2)->EnableWindow(FALSE);
+    } else if (m_cbDigitalTuner.GetCount()) {
+        m_iDefaultDevice =  1;
+        GetDlgItem(IDC_RADIO1)->EnableWindow(FALSE);
+    } else {
+        m_iDefaultDevice = s.iDefaultCaptureDevice;
+        GetDlgItem(IDC_RADIO2)->EnableWindow(FALSE);
+        GetDlgItem(IDC_RADIO1)->EnableWindow(FALSE);
+    }
+    m_cbRebuildFilterGraph.AddString(ResStr(IDS_PPAGE_CAPTURE_FG0));
+    m_cbRebuildFilterGraph.AddString(ResStr(IDS_PPAGE_CAPTURE_FG1));
+    m_cbRebuildFilterGraph.AddString(ResStr(IDS_PPAGE_CAPTURE_FG2));
+    m_cbRebuildFilterGraph.SetCurSel(s.nDVBRebuildFilterGraph);
+    CorrectComboListWidth(m_cbRebuildFilterGraph);
+    m_cbStopFilterGraph.AddString(ResStr(IDS_PPAGE_CAPTURE_SFG0));
+    m_cbStopFilterGraph.AddString(ResStr(IDS_PPAGE_CAPTURE_SFG1));
+    m_cbStopFilterGraph.AddString(ResStr(IDS_PPAGE_CAPTURE_SFG2));
+    m_cbStopFilterGraph.SetCurSel(s.nDVBStopFilterGraph);
+    CorrectComboListWidth(m_cbStopFilterGraph);
+    OnCbnSelchangeRebuildFilterGraph();
+    OnCbnSelchangeStopFilterGraph();
     UpdateData(FALSE);
+    SaveFoundDevices(); // Save (new) devices to ensure that comboboxes reflect actual settings.
 
     return TRUE;
+}
+
+void CPPageCapture::OnUpdateAnalog(CCmdUI* pCmdUI)
+{
+    pCmdUI->Enable(IsDlgButtonChecked(IDC_RADIO1) && m_cbAnalogVideo.GetCount());
+}
+
+void CPPageCapture::OnUpdateDigital(CCmdUI* pCmdUI)
+{
+    pCmdUI->Enable(IsDlgButtonChecked(IDC_RADIO2) && m_cbDigitalTuner.GetCount());
+}
+
+void CPPageCapture::OnUpdateDigitalReciver(CCmdUI* pCmdUI)
+{
+    pCmdUI->Enable(IsDlgButtonChecked(IDC_RADIO2) && m_cbDigitalReceiver.GetCount());
+}
+
+void CPPageCapture::OnUpdateDigitalStopFilterGraph(CCmdUI* pCmdUI)
+{
+    pCmdUI->Enable(IsDlgButtonChecked(IDC_RADIO2) && m_cbDigitalTuner.GetCount() &&
+                   (m_cbRebuildFilterGraph.GetCurSel() != 2));
+}
+
+void CPPageCapture::OnCbnSelchangeRebuildFilterGraph()
+{
+    if (m_cbRebuildFilterGraph.GetCurSel() == 0) {
+        GetDlgItem(IDC_PPAGECAPTURE_DESC1)->SetWindowText(ResStr(IDS_PPAGE_CAPTURE_FGDESC0));
+    } else if (m_cbRebuildFilterGraph.GetCurSel() == 1) {
+        GetDlgItem(IDC_PPAGECAPTURE_DESC1)->SetWindowText(ResStr(IDS_PPAGE_CAPTURE_FGDESC1));
+    } else if (m_cbRebuildFilterGraph.GetCurSel() == 2) {
+        GetDlgItem(IDC_PPAGECAPTURE_DESC1)->SetWindowText(ResStr(IDS_PPAGE_CAPTURE_FGDESC2));
+    } else {
+        GetDlgItem(IDC_PPAGECAPTURE_DESC1)->SetWindowText(_T(""));
+    }
+    SetModified();
+}
+
+
+void CPPageCapture::OnCbnSelchangeStopFilterGraph()
+{
+    SetModified();
 }
 
 void CPPageCapture::FindAnalogDevices()
@@ -342,26 +430,34 @@ void CPPageCapture::FindAnalogDevices()
     const CAppSettings& s = AfxGetAppSettings();
     int iSel = 0;
 
-    // List video devised
+    // List video devices
     BeginEnumSysDev(CLSID_VideoInputDeviceCategory, pMoniker) {
         CComPtr<IPropertyBag> pPB;
         pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB);
 
         CComVariant var;
-        pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL);
-        int i = m_cbAnalogVideo.AddString(CString(var.bstrVal));
-
-        LPOLESTR strName = NULL;
-        if (SUCCEEDED(pMoniker->GetDisplayName(NULL, NULL, &strName))) {
-            m_vidnames.Add(CString(strName));
-            if (s.strAnalogVideo == CString(strName)) {
-                iSel = i;
+        if (SUCCEEDED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, nullptr))) {
+            int i = m_cbAnalogVideo.AddString(CString(var.bstrVal));
+            LPOLESTR strName = nullptr;
+            if (SUCCEEDED(pMoniker->GetDisplayName(nullptr, nullptr, &strName))) {
+                m_vidnames.Add(CString(strName));
+                if (s.strAnalogVideo == CString(strName)) {
+                    iSel = i;
+                }
+                CoTaskMemFree(strName);
             }
-            CoTaskMemFree(strName);
         }
     }
     EndEnumSysDev;
 
+    if (m_cbAnalogVideo.GetCount()) {
+        m_cbAnalogVideo.SetCurSel(iSel);
+    } else {
+        return;
+    }
+
+    // List audio devices
+    iSel = 0;
     {
         int i = m_cbAnalogAudio.AddString(_T("<Video Capture Device>"));
         m_audnames.Add(_T(""));
@@ -370,27 +466,22 @@ void CPPageCapture::FindAnalogDevices()
         }
     }
 
-    if (m_cbAnalogVideo.GetCount()) {
-        m_cbAnalogVideo.SetCurSel(iSel);
-    }
-
-    // List audio devised
-    iSel = 0;
     BeginEnumSysDev(CLSID_AudioInputDeviceCategory, pMoniker) {
         CComPtr<IPropertyBag> pPB;
         pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB);
 
         CComVariant var;
-        pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL);
-        int i = m_cbAnalogAudio.AddString(CString(var.bstrVal));
+        if (SUCCEEDED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, nullptr))) {
+            int i = m_cbAnalogAudio.AddString(CString(var.bstrVal));
 
-        LPOLESTR strName = NULL;
-        if (SUCCEEDED(pMoniker->GetDisplayName(NULL, NULL, &strName))) {
-            m_audnames.Add(CString(strName));
-            if (s.strAnalogAudio == CString(strName)) {
-                iSel = i;
+            LPOLESTR strName = nullptr;
+            if (SUCCEEDED(pMoniker->GetDisplayName(nullptr, nullptr, &strName))) {
+                m_audnames.Add(CString(strName));
+                if (s.strAnalogAudio == CString(strName)) {
+                    iSel = i;
+                }
+                CoTaskMemFree(strName);
             }
-            CoTaskMemFree(strName);
         }
     }
     EndEnumSysDev;
@@ -484,27 +575,35 @@ void CPPageCapture::FindDigitalDevices()
 {
     const CAppSettings& s = AfxGetAppSettings();
     int iSel = 0;
+    bool bFound = false;
 
     BeginEnumSysDev(KSCATEGORY_BDA_NETWORK_PROVIDER, pMoniker) {
         CComPtr<IPropertyBag> pPB;
         pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB);
 
         CComVariant var;
-        pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL);
-        int i = m_cbDigitalNetworkProvider.AddString(CString(var.bstrVal));
+        if (SUCCEEDED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, nullptr))) {
+            int i = m_cbDigitalNetworkProvider.AddString(CString(var.bstrVal));
 
-        LPOLESTR strName = NULL;
-        if (SUCCEEDED(pMoniker->GetDisplayName(NULL, NULL, &strName))) {
-            m_providernames.Add(CString(strName));
-            if (s.strBDANetworkProvider == CString(strName)) {
-                iSel = i;
+            LPOLESTR strName = nullptr;
+            if (SUCCEEDED(pMoniker->GetDisplayName(nullptr, nullptr, &strName))) {
+                m_providernames.Add(CString(strName));
+                if (s.strBDANetworkProvider == CString(strName)) {
+                    iSel = i;
+                    bFound = true;
+                } else if (!bFound && CString(var.bstrVal) == _T("Microsoft Network Provider")) {
+                    // Select Microsoft Network Provider by default, other network providers are deprecated.
+                    iSel = i;
+                }
+                CoTaskMemFree(strName);
             }
-            CoTaskMemFree(strName);
         }
     }
     EndEnumSysDev;
     if (m_cbDigitalNetworkProvider.GetCount()) {
         m_cbDigitalNetworkProvider.SetCurSel(iSel);
+    } else {
+        return;
     }
 
 
@@ -514,21 +613,24 @@ void CPPageCapture::FindDigitalDevices()
         pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB);
 
         CComVariant var;
-        pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL);
-        int i = m_cbDigitalTuner.AddString(CString(var.bstrVal));
+        if (SUCCEEDED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, nullptr))) {
+            int i = m_cbDigitalTuner.AddString(CString(var.bstrVal));
 
-        LPOLESTR strName = NULL;
-        if (SUCCEEDED(pMoniker->GetDisplayName(NULL, NULL, &strName))) {
-            m_tunernames.Add(CString(strName));
-            if (s.strBDATuner == CString(strName)) {
-                iSel = i;
+            LPOLESTR strName = nullptr;
+            if (SUCCEEDED(pMoniker->GetDisplayName(nullptr, nullptr, &strName))) {
+                m_tunernames.Add(CString(strName));
+                if (s.strBDATuner == CString(strName)) {
+                    iSel = i;
+                }
+                CoTaskMemFree(strName);
             }
-            CoTaskMemFree(strName);
         }
     }
     EndEnumSysDev;
     if (m_cbDigitalTuner.GetCount()) {
         m_cbDigitalTuner.SetCurSel(iSel);
+    } else {
+        return;
     }
 
     iSel = 0;
@@ -537,16 +639,17 @@ void CPPageCapture::FindDigitalDevices()
         pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB);
 
         CComVariant var;
-        pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL);
-        int i = m_cbDigitalReceiver.AddString(CString(var.bstrVal));
+        if (SUCCEEDED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, nullptr))) {
+            int i = m_cbDigitalReceiver.AddString(CString(var.bstrVal));
 
-        LPOLESTR strName = NULL;
-        if (SUCCEEDED(pMoniker->GetDisplayName(NULL, NULL, &strName))) {
-            m_receivernames.Add(CString(strName));
-            if (s.strBDAReceiver == CString(strName)) {
-                iSel = i;
+            LPOLESTR strName = nullptr;
+            if (SUCCEEDED(pMoniker->GetDisplayName(nullptr, nullptr, &strName))) {
+                m_receivernames.Add(CString(strName));
+                if (s.strBDAReceiver == CString(strName)) {
+                    iSel = i;
+                }
+                CoTaskMemFree(strName);
             }
-            CoTaskMemFree(strName);
         }
     }
     EndEnumSysDev;
@@ -555,10 +658,8 @@ void CPPageCapture::FindDigitalDevices()
     }
 }
 
-BOOL CPPageCapture::OnApply()
+void CPPageCapture::SaveFoundDevices()
 {
-    UpdateData();
-
     CAppSettings& s = AfxGetAppSettings();
 
     s.iDefaultCaptureDevice = m_iDefaultDevice;
@@ -572,7 +673,6 @@ BOOL CPPageCapture::OnApply()
     if (m_cbAnalogCountry.GetCurSel() >= 0) {
         s.iAnalogCountry = ((cc_t*)m_cbAnalogCountry.GetItemDataPtr(m_cbAnalogCountry.GetCurSel()))->code;
     }
-
     if (m_cbDigitalNetworkProvider.GetCurSel() >= 0) {
         s.strBDANetworkProvider = m_providernames[m_cbDigitalNetworkProvider.GetCurSel()];
     }
@@ -582,6 +682,14 @@ BOOL CPPageCapture::OnApply()
     if (m_cbDigitalReceiver.GetCurSel() >= 0) {
         s.strBDAReceiver = m_receivernames[m_cbDigitalReceiver.GetCurSel()];
     }
+    s.nDVBRebuildFilterGraph = (DVB_RebuildFilterGraph) m_cbRebuildFilterGraph.GetCurSel();
+    s.nDVBStopFilterGraph = (DVB_StopFilterGraph) m_cbStopFilterGraph.GetCurSel();
 
+}
+
+BOOL CPPageCapture::OnApply()
+{
+    UpdateData();
+    SaveFoundDevices();
     return __super::OnApply();
 }

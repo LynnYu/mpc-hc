@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -23,6 +23,7 @@
 
 #include "../../InternalPropertyPage.h"
 #include "IMpeg2DecFilter.h"
+#include "resource.h"
 #include <afxcmn.h>
 
 class __declspec(uuid("E5FB6957-65E6-491B-BB37-B25C9FE3BEA7"))
@@ -75,12 +76,8 @@ public:
     void OnDeactivate();
     bool OnApply();
 
-    static LPCTSTR GetWindowTitle() {
-        return _T("Settings");
-    }
-    static CSize GetWindowSize() {
-        return CSize(340, 296);
-    }
+    static LPCTSTR GetWindowTitle() { return MAKEINTRESOURCE(IDS_FILTER_SETTINGS_CAPTION); }
+    static CSize GetWindowSize() { return CSize(340, 296); }
 
     DECLARE_MESSAGE_MAP()
 

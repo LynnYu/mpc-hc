@@ -23,8 +23,13 @@
 
 /**
  * @file
- * @brief
- *     external api for the swscale stuff
+ * @ingroup lsws
+ * external API header
+ */
+
+/**
+ * @defgroup lsws Libswscale
+ * @{
  */
 
 #include <stdint.h>
@@ -77,6 +82,7 @@ const char *swscale_license(void);
 #define SWS_DIRECT_BGR        0x8000
 #define SWS_ACCURATE_RND      0x40000
 #define SWS_BITEXACT          0x80000
+#define SWS_ERROR_DIFFUSION  0x800000
 
 #if FF_API_SWS_CPU_CAPS
 /**
@@ -85,9 +91,7 @@ const char *swscale_license(void);
  */
 #define SWS_CPU_CAPS_MMX      0x80000000
 #define SWS_CPU_CAPS_MMXEXT   0x20000000
-#if LIBSWSCALE_VERSION_MAJOR < 3
 #define SWS_CPU_CAPS_MMX2     0x20000000
-#endif
 #define SWS_CPU_CAPS_3DNOW    0x40000000
 #define SWS_CPU_CAPS_ALTIVEC  0x10000000
 #define SWS_CPU_CAPS_BFIN     0x01000000
@@ -343,5 +347,9 @@ void sws_convertPalette8ToPacked24(const uint8_t *src, uint8_t *dst, int num_pix
  * @see av_opt_find().
  */
 const AVClass *sws_get_class(void);
+
+/**
+ * @}
+ */
 
 #endif /* SWSCALE_SWSCALE_H */

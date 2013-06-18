@@ -1,21 +1,8 @@
-// Reader_libcurl - All info about media files
-// Copyright (C) 2002-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // For user: you can disable or enable it
@@ -234,7 +221,7 @@ Reader_libcurl::~Reader_libcurl ()
 //***************************************************************************
 
 //---------------------------------------------------------------------------
-size_t Reader_libcurl::Format_Test(MediaInfo_Internal* MI, const String &File_Name)
+size_t Reader_libcurl::Format_Test(MediaInfo_Internal* MI, String File_Name)
 {
     #if defined MEDIAINFO_LIBCURL_DLL_RUNTIME
         if (libcurl_Module_Count==0)
@@ -298,6 +285,8 @@ size_t Reader_libcurl::Format_Test(MediaInfo_Internal* MI, const String &File_Na
     #if MEDIAINFO_EVENTS
         {
             struct MediaInfo_Event_General_Start_0 Event;
+            memset(&Event, 0xFF, sizeof(struct MediaInfo_Event_General_Start_0));
+            Event.StreamIDs_Size=0;
             Event.EventCode=MediaInfo_EventCode_Create(MediaInfo_Parser_None, MediaInfo_Event_General_Start, 0);
             Event.Stream_Size=(int64u)-1;
             MI->Config.Event_Send(NULL, (const int8u*)&Event, sizeof(MediaInfo_Event_General_Start_0));

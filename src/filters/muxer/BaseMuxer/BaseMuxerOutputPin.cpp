@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -51,7 +51,7 @@ IBitStream* CBaseMuxerOutputPin::GetBitStream()
 
 HRESULT CBaseMuxerOutputPin::BreakConnect()
 {
-    m_pBitStream = NULL;
+    m_pBitStream = nullptr;
 
     return __super::BreakConnect();
 }
@@ -108,7 +108,7 @@ HRESULT CBaseMuxerOutputPin::GetMediaType(int iPosition, CMediaType* pmt)
 
 HRESULT CBaseMuxerOutputPin::DeliverEndOfStream()
 {
-    m_pBitStream = NULL;
+    m_pBitStream = nullptr;
 
     return __super::DeliverEndOfStream();
 }
@@ -164,7 +164,7 @@ void CBaseMuxerRawOutputPin::MuxHeader(const CMediaType& mt)
             pBitStream->ByteWrite(utf8bom, sizeof(utf8bom));
         }
 
-        CStringA str((char*)p, mt.FormatLength() - (p - mt.Format()));
+        CStringA str((char*)p, mt.FormatLength() - (ULONG)(p - mt.Format()));
         pBitStream->StrWrite(str + '\n', true);
 
         if (str.Find("[Events]") < 0) {
@@ -296,7 +296,7 @@ void CBaseMuxerRawOutputPin::MuxPacket(const CMediaType& mt, const MuxerPacket* 
         DVD_HMSF_TIMECODE start = RT2HMSF(pPacket->rtStart, 25);
         DVD_HMSF_TIMECODE stop = RT2HMSF(pPacket->rtStop, 25);
 
-        str.Format("%d\n%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d\n%s\n\n",
+        str.Format("%d\n%02u:%02u:%02u,%03d --> %02u:%02u:%02u,%03d\n%s\n\n",
                    pPacket->index + 1,
                    start.bHours, start.bMinutes, start.bSeconds, (int)((pPacket->rtStart / 10000) % 1000),
                    stop.bHours, stop.bMinutes, stop.bSeconds, (int)((pPacket->rtStop / 10000) % 1000),
@@ -340,7 +340,7 @@ void CBaseMuxerRawOutputPin::MuxPacket(const CMediaType& mt, const MuxerPacket* 
             layer = "Marked=0";
         }
 
-        str.Format("Dialogue: %s,%d:%02d:%02d.%02d,%d:%02d:%02d.%02d,%s,%s,%s,%s,%s,%s,%s\n",
+        str.Format("Dialogue: %s,%u:%02u:%02u.%02d,%u:%02u:%02u.%02d,%s,%s,%s,%s,%s,%s,%s\n",
                    layer,
                    start.bHours, start.bMinutes, start.bSeconds, (int)((pPacket->rtStart / 100000) % 100),
                    stop.bHours, stop.bMinutes, stop.bSeconds, (int)((pPacket->rtStop / 100000) % 100),
@@ -444,8 +444,8 @@ void CBaseMuxerRawOutputPin::MuxFooter(const CMediaType& mt)
         pBitStream->ByteWrite(&size, 4);
     } else if (mt.subtype == MEDIASUBTYPE_VOBSUB) {
         if (CComQIPtr<IFileSinkFilter> pFSF = GetFilterFromPin(GetConnected())) {
-            WCHAR* fn = NULL;
-            if (SUCCEEDED(pFSF->GetCurFile(&fn, NULL))) {
+            WCHAR* fn = nullptr;
+            if (SUCCEEDED(pFSF->GetCurFile(&fn, nullptr))) {
                 CPathW p(fn);
                 p.RenameExtension(L".idx");
                 CoTaskMemFree(fn);
@@ -473,7 +473,7 @@ void CBaseMuxerRawOutputPin::MuxFooter(const CMediaType& mt)
                     while (pos) {
                         const idx_t& i = m_idx.GetNext(pos);
                         DVD_HMSF_TIMECODE start = RT2HMSF(i.rt, 25);
-                        _ftprintf_s(f, _T("timestamp: %02d:%02d:%02d:%03d, filepos: %09I64x\n"),
+                        _ftprintf_s(f, _T("timestamp: %02u:%02u:%02u:%03d, filepos: %09I64x\n"),
                                     start.bHours, start.bMinutes, start.bSeconds, (int)((i.rt / 10000) % 1000),
                                     i.fp);
                     }

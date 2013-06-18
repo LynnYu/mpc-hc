@@ -1,5 +1,5 @@
 @ECHO OFF
-REM (C) 2012 see Authors.txt
+REM (C) 2012-2013 see Authors.txt
 REM
 REM This file is part of MPC-HC.
 REM
@@ -17,8 +17,8 @@ REM You should have received a copy of the GNU General Public License
 REM along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-SETLOCAL ENABLEEXTENSIONS
-CD /D %~dp0
+SETLOCAL
+PUSHD %~dp0
 
 REM You can set here the Inno Setup path if for example you have Inno Setup Unicode
 REM installed and you want to use the ANSI Inno Setup which is in another location
@@ -26,7 +26,7 @@ IF NOT DEFINED InnoSetupPath SET "InnoSetupPath=H:\progs\thirdparty\isetup"
 
 CALL :SubDetectInnoSetup
 CALL :SubInno
-CALL :SubInno x64_build
+CALL :SubInno x64Build
 
 
 :END
@@ -38,9 +38,9 @@ EXIT /B
 :SubInno
 ECHO.
 TITLE Building VSFilter installer...
-"%InnoSetupPath%\ISCC.exe" /Q "vsfilter_setup.iss" /D%1
+"%InnoSetupPath%\ISCC.exe" /Q "vsfilter_setup.iss" /D%~1 /D%~2
 IF %ERRORLEVEL% NEQ 0 GOTO EndWithError
-IF /I "%1%" == "x64_build" (
+IF /I "%~1%" == "x64Build" (
   ECHO Installer x64 compiled successfully!
 ) ELSE (
   ECHO Installer x86 compiled successfully!

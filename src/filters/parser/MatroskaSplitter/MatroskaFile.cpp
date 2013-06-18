@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -37,16 +37,13 @@ using namespace MatroskaReader;
                                                  \
     if (!pMN)                                    \
         return S_FALSE;                          \
-    do                                           \
-    {                                            \
-        switch (pMN->m_id)                       \
-        {
+    do {                                         \
+        switch (pMN->m_id) {
 
 
 #define EndChunk                                 \
         }                                        \
-    }                                            \
-    while (pMN->Next());                         \
+    } while (pMN->Next());                       \
                                                  \
     return S_OK;
 
@@ -220,7 +217,7 @@ HRESULT Segment::ParseMinimal(CMatroskaNode* pMN0)
         return S_OK;
     }
 
-    while (MatroskaReader::QWORD pos = pMN->FindPos(0x114D9B74, pMN->GetPos())) {
+    while (QWORD pos = pMN->FindPos(0x114D9B74, pMN->GetPos())) {
         pMN->SeekTo(pos);
         if (FAILED(pMN->Parse())) {
             break; // a broken file
@@ -298,7 +295,7 @@ ChapterAtom* ChapterAtom::FindChapterAtom(UINT64 id)
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 ChapterAtom* Segment::FindChapterAtom(UINT64 id, int nEditionEntry)
@@ -317,7 +314,7 @@ ChapterAtom* Segment::FindChapterAtom(UINT64 id, int nEditionEntry)
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 HRESULT Info::Parse(CMatroskaNode* pMN0)
@@ -485,7 +482,7 @@ static int cesort(const void* a, const void* b)
 
 bool TrackEntry::Expand(CBinary& data, UINT64 Scope)
 {
-    if (ces.ce.GetCount() == 0) {
+    if (ces.ce.IsEmpty()) {
         return true;
     }
 
@@ -754,9 +751,9 @@ HRESULT SimpleBlock::Parse(CMatroskaNode* pMN, bool fFull)
         return S_OK;
     }
 
-    CAtlList<MatroskaReader::QWORD> lens;
-    MatroskaReader::QWORD tlen = 0;
-    MatroskaReader::QWORD FrameSize;
+    CAtlList<QWORD> lens;
+    QWORD tlen = 0;
+    QWORD FrameSize;
     BYTE FramesInLaceLessOne;
 
     switch ((Lacing & 0x06) >> 1) {
@@ -770,7 +767,7 @@ HRESULT SimpleBlock::Parse(CMatroskaNode* pMN, bool fFull)
             pMN->Read(n);
             while (n-- > 0) {
                 BYTE b;
-                MatroskaReader::QWORD len = 0;
+                QWORD len = 0;
                 do {
                     pMN->Read(b);
                     len += b;
@@ -813,7 +810,7 @@ HRESULT SimpleBlock::Parse(CMatroskaNode* pMN, bool fFull)
 
     POSITION pos = lens.GetHeadPosition();
     while (pos) {
-        MatroskaReader::QWORD len = lens.GetNext(pos);
+        QWORD len = lens.GetNext(pos);
         CAutoPtr<CBinary> p(DEBUG_NEW CBinary());
         p->SetCount((INT_PTR)len);
         pMN->Read(p->GetData(), len);
@@ -1040,8 +1037,8 @@ bool CBinary::Compress(ContentCompression& cc)
         c_stream.next_in = GetData();
         c_stream.avail_in = (uInt)GetCount();
 
-        BYTE* dst = NULL;
-        BYTE* newDst = NULL;
+        BYTE* dst = nullptr;
+        BYTE* newDst = nullptr;
         int n = 0;
         do {
             newDst = (BYTE*)realloc(dst, ++n * 10);
@@ -1086,8 +1083,8 @@ bool CBinary::Decompress(ContentCompression& cc)
         d_stream.next_in = GetData();
         d_stream.avail_in = (uInt)GetCount();
 
-        BYTE* dst = NULL;
-        BYTE* newDst = NULL;
+        BYTE* dst = nullptr;
+        BYTE* newDst = nullptr;
         int n = 0;
         do {
             newDst = (BYTE*)realloc(dst, ++n * 1000);
@@ -1121,7 +1118,7 @@ HRESULT CANSI::Parse(CMatroskaNode* pMN)
 {
     Empty();
 
-    MatroskaReader::QWORD len = pMN->m_len;
+    QWORD len = pMN->m_len;
     CHAR c;
     while (len-- > 0 && SUCCEEDED(pMN->Read(c))) {
         *this += c;
@@ -1280,7 +1277,7 @@ HRESULT CLength::Parse(CMatroskaNode* pMN)
 
     //int nMoreBytesTmp = nMoreBytes;
 
-    MatroskaReader::QWORD UnknownSize = (1i64 << (7 * (nMoreBytes + 1))) - 1;
+    QWORD UnknownSize = (1i64 << (7 * (nMoreBytes + 1))) - 1;
 
     while (nMoreBytes-- > 0) {
         m_val <<= 8;
@@ -1329,7 +1326,7 @@ HRESULT CSignedLength::Parse(CMatroskaNode* pMN)
 
     //int nMoreBytesTmp = nMoreBytes;
 
-    MatroskaReader::QWORD UnknownSize = (1i64<<(7*(nMoreBytes+1)))-1;
+    QWORD UnknownSize = (1i64<<(7*(nMoreBytes+1)))-1;
 
     while (nMoreBytes-- > 0)
     {
@@ -1389,7 +1386,7 @@ HRESULT CSimpleBlockNode::Parse(CMatroskaNode* pMN, bool fFull)
 
 CMatroskaNode::CMatroskaNode(CMatroskaFile* pMF)
     : m_pMF(pMF)
-    , m_pParent(NULL)
+    , m_pParent(nullptr)
 {
     ASSERT(m_pMF);
     m_start = m_filepos = 0;
@@ -1453,9 +1450,9 @@ bool CMatroskaNode::Next(bool fSame)
 
 bool CMatroskaNode::Find(DWORD id, bool fSearch)
 {
-    MatroskaReader::QWORD pos = m_pParent && m_pParent->m_id == 0x18538067 /*segment?*/
-                                ? FindPos(id)
-                                : 0;
+    QWORD pos = m_pParent && m_pParent->m_id == 0x18538067 /*segment?*/
+                ? FindPos(id)
+                : 0;
 
     if (pos) {
         SeekTo(pos);
@@ -1469,17 +1466,17 @@ bool CMatroskaNode::Find(DWORD id, bool fSearch)
     return (m_id == id);
 }
 
-void CMatroskaNode::SeekTo(MatroskaReader::QWORD pos)
+void CMatroskaNode::SeekTo(QWORD pos)
 {
     m_pMF->Seek(pos);
 }
 
-MatroskaReader::QWORD CMatroskaNode::GetPos()
+QWORD CMatroskaNode::GetPos()
 {
     return m_pMF->GetPos();
 }
 
-MatroskaReader::QWORD CMatroskaNode::GetLength()
+QWORD CMatroskaNode::GetLength()
 {
     return m_pMF->GetLength();
 }
@@ -1490,12 +1487,12 @@ HRESULT CMatroskaNode::Read(T& var)
     return m_pMF->Read(var);
 }
 
-HRESULT CMatroskaNode::Read(BYTE* pData, MatroskaReader::QWORD len)
+HRESULT CMatroskaNode::Read(BYTE* pData, QWORD len)
 {
     return m_pMF->ByteRead(pData, len);
 }
 
-MatroskaReader::QWORD CMatroskaNode::FindPos(DWORD id, MatroskaReader::QWORD start)
+QWORD CMatroskaNode::FindPos(DWORD id, QWORD start)
 {
     Segment& sm = m_pMF->m_segment;
 

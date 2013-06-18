@@ -1,5 +1,5 @@
 /*
- * (C) 2011-2012 see Authors.txt
+ * (C) 2011-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -30,9 +30,6 @@ public IUnknown {
 
     STDMETHOD(SetForcedSub(BOOL nValue)) = 0;
     STDMETHOD_(BOOL, GetForcedSub()) = 0;
-
-    STDMETHOD(SetTrackPriority(BOOL nValue)) = 0;
-    STDMETHOD_(BOOL, GetTrackPriority()) = 0;
 
     STDMETHOD(SetAudioLanguageOrder(WCHAR * nValue)) = 0;
     STDMETHOD_(WCHAR*, GetAudioLanguageOrder()) = 0;

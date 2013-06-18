@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -32,7 +32,7 @@
 #define PTS_MAX_BEFORE_WRAP (((1i64 << 33) - 1) * 10000 / 90)
 
 
-CMpegSplitterFile::CMpegSplitterFile(IAsyncReader* pAsyncReader, HRESULT& hr, bool bIsHdmv, CHdmvClipInfo& ClipInfo, int guid_flag, bool ForcedSub, bool TrackPriority, int AC3CoreOnly, bool AlternativeDuration)
+CMpegSplitterFile::CMpegSplitterFile(IAsyncReader* pAsyncReader, HRESULT& hr, bool bIsHdmv, CHdmvClipInfo& ClipInfo, int guid_flag, bool ForcedSub, int AC3CoreOnly, bool AlternativeDuration)
     : CBaseSplitterFileEx(pAsyncReader, hr, DEFAULT_CACHE_LENGTH, false, true)
     , m_type(mpeg_us)
     , m_rate(0)
@@ -44,7 +44,6 @@ CMpegSplitterFile::CMpegSplitterFile(IAsyncReader* pAsyncReader, HRESULT& hr, bo
     , m_ClipInfo(ClipInfo)
     , m_nVC1_GuidFlag(guid_flag)
     , m_ForcedSub(ForcedSub)
-    , m_TrackPriority(TrackPriority)
     , m_AC3CoreOnly(AC3CoreOnly)
     , m_AlternativeDuration(AlternativeDuration)
     , m_init(false)
@@ -108,7 +107,7 @@ HRESULT CMpegSplitterFile::Init(IAsyncReader* pAsyncReader)
 
     if (m_type == mpeg_us) {
         BYTE b;
-        for (int i = 0; (i < 4 || GetPos() < 65536) && m_type == mpeg_us && NextMpegStartCode(b); i++) {
+        for (int i = 0; (i < 4 || GetPos() < MAX_PROBE_SIZE) && m_type == mpeg_us && NextMpegStartCode(b); i++) {
             if (b == 0xba) {
                 pshdr h;
                 if (Read(h)) {
@@ -144,7 +143,7 @@ HRESULT CMpegSplitterFile::Init(IAsyncReader* pAsyncReader)
 
     if (IsRandomAccess() || IsStreaming()) {
         if (IsStreaming()) {
-            for (int i = 0; i < 20 || i < 50 && S_OK != HasMoreData(1024 * 100, 100); i++) {
+            for (int i = 0; i < 20 || i < 50 && S_OK != HasMoreData(MEGABYTE, 100); i++) {
                 ;
             }
         }
@@ -428,7 +427,7 @@ HRESULT CMpegSplitterFile::SearchStreams(__int64 start, __int64 stop, IAsyncRead
                     }
 
                     if (h2.fpts && CalcDuration && (m_AlternativeDuration || (GetMasterStream() && GetMasterStream()->GetHead() == h.pid))) {
-                        if (m_rtPrec != _I64_MIN && abs(h2.pts - m_rtPrec) >= PTS_MAX_BEFORE_WRAP * 9 / 10) {
+                        if (m_rtPrec != _I64_MIN && abs(h2.pts - m_rtPrec) >= PTS_MAX_BEFORE_WRAP / 2) {
                             m_bPTSWrap = true;
                             m_rtMax = h2.pts;
                             m_posMax = GetPos();
@@ -451,7 +450,7 @@ HRESULT CMpegSplitterFile::SearchStreams(__int64 start, __int64 stop, IAsyncRead
                             // use this code only if Blu-ray is detected
                             if (m_ClipInfo.IsHdmv()) {
                                 for (size_t i = 0; i < m_ClipInfo.GetStreamNumber(); i++) {
-                                    CHdmvClipInfo::Stream* stream = m_ClipInfo.GetStreamByIndex(i);
+                                    const CHdmvClipInfo::Stream* stream = m_ClipInfo.GetStreamByIndex(i);
                                     if (stream->m_Type == VIDEO_STREAM_H264 && m_rtMin == 116506666) {
                                         CComQIPtr<ISyncReader>  pReader = pAsyncReader;
                                         if (pReader) {
@@ -691,7 +690,7 @@ DWORD CMpegSplitterFile::AddStream(WORD pid, BYTE pesid, BYTE ps1id, DWORD len)
                 int iProgram;
                 const CHdmvClipInfo::Stream* pClipInfo;
                 const program* pProgram = FindProgram(s.pid, iProgram, pClipInfo);
-                if ((type == unknown) && (pProgram != NULL)) {
+                if ((type == unknown) && (pProgram != nullptr)) {
                     PES_STREAM_TYPE StreamType = INVALID;
 
                     Seek(start);
@@ -707,7 +706,7 @@ DWORD CMpegSplitterFile::AddStream(WORD pid, BYTE pesid, BYTE ps1id, DWORD len)
                         break;
                         case PRESENTATION_GRAPHICS_STREAM: {
                             CMpegSplitterFile::hdmvsubhdr h;
-                            if (!m_streams[subpic].Find(s) && Read(h, &s.mt, pClipInfo ? pClipInfo->m_LanguageCode : NULL)) {
+                            if (!m_streams[subpic].Find(s) && Read(h, &s.mt, pClipInfo ? pClipInfo->m_LanguageCode : nullptr)) {
                                 m_bIsHdmv = true;
                                 type = subpic;
                             }
@@ -719,7 +718,7 @@ DWORD CMpegSplitterFile::AddStream(WORD pid, BYTE pesid, BYTE ps1id, DWORD len)
                 int iProgram;
                 const CHdmvClipInfo::Stream* pClipInfo;
                 const program* pProgram = FindProgram(s.pid, iProgram, pClipInfo);
-                if ((type == unknown) && (pProgram != NULL) && AUDIO_STREAM_AC3_TRUE_HD == pProgram->streams[iProgram].type) {
+                if ((type == unknown) && (pProgram != nullptr) && AUDIO_STREAM_AC3_TRUE_HD == pProgram->streams[iProgram].type) {
                     const stream* source = m_streams[audio].FindStream(s.pid);
                     if (source && source->mt.subtype == MEDIASUBTYPE_DOLBY_AC3) {
                         CMpegSplitterFile::ac3hdr h;
@@ -912,7 +911,7 @@ CAtlList<CMpegSplitterFile::stream>* CMpegSplitterFile::GetMasterStream()
 #if defined(MVC_SUPPORT)
         !m_streams[stereo].IsEmpty() ? &m_streams[stereo] :
 #endif
-        NULL;
+        nullptr;
 }
 
 void CMpegSplitterFile::UpdatePrograms(const tshdr& h, bool UpdateLang)
@@ -1026,7 +1025,7 @@ void CMpegSplitterFile::UpdatePrograms(CGolombBuffer gb, WORD pid, bool UpdateLa
                     stream s;
                     s.pid = pid;
                     CMpegSplitterFile::hdmvsubhdr hdr;
-                    if (Read(hdr, &s.mt, NULL)) {
+                    if (Read(hdr, &s.mt, nullptr)) {
                         if (!m_streams[subpic].Find(s)) {
                             m_streams[subpic].Insert(s, this);
                         }
@@ -1115,7 +1114,7 @@ const CMpegSplitterFile::program* CMpegSplitterFile::FindProgram(WORD pid, int& 
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 bool CMpegSplitterFile::GetStreamType(WORD pid, PES_STREAM_TYPE& stream_type)

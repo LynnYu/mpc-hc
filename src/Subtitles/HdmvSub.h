@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -87,9 +87,8 @@ public:
         CAtlList<CompositionObject*> objects;
 
         ~HDMV_PRESENTATION_SEGMENT() {
-            CompositionObject* pObject;
-            while (objects.GetCount() > 0) {
-                pObject = objects.RemoveHead();
+            while (!objects.IsEmpty()) {
+                CompositionObject* pObject = objects.RemoveHead();
                 delete pObject;
             }
         }
@@ -149,4 +148,6 @@ private:
 
     HDMV_PRESENTATION_SEGMENT* FindPresentationSegment(REFERENCE_TIME rt);
     CompositionObject* FindObject(HDMV_PRESENTATION_SEGMENT* pPresentationSegment, short sObjectId);
+
+    void      RemoveOldSegments(REFERENCE_TIME rt);
 };

@@ -1,6 +1,5 @@
 /*
- * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2009-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -29,7 +28,7 @@
 #include "moreuuids.h"
 #include "FLACSource.h"
 #include "../../../DSUtil/DSUtil.h"
-#include "libflac/include/FLAC/stream_decoder.h"
+#include "libflac/src/libflac/include/protected/stream_decoder.h"
 
 #define _DECODER_   (FLAC__StreamDecoder*)m_pDecoder
 
@@ -40,7 +39,7 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut[] = {
 };
 
 const AMOVIESETUP_PIN sudOpPin[] = {
-    {L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, _countof(sudPinTypesOut), sudPinTypesOut}
+    {L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, _countof(sudPinTypesOut), sudPinTypesOut}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -48,7 +47,7 @@ const AMOVIESETUP_FILTER sudFilter[] = {
 };
 
 CFactoryTemplate g_Templates[] = {
-    {sudFilter[0].strName, sudFilter[0].clsID, CreateInstance<CFLACSource>, NULL, &sudFilter[0]}
+    {sudFilter[0].strName, sudFilter[0].clsID, CreateInstance<CFLACSource>, nullptr, &sudFilter[0]}
 };
 
 int g_cTemplates = _countof(g_Templates);
@@ -115,6 +114,7 @@ STDMETHODIMP CFLACSource::NonDelegatingQueryInterface(REFIID riid, void** ppv)
 
     return
         QI(IDSMChapterBag)
+        QI2(IAMMediaContent)
         __super::NonDelegatingQueryInterface(riid, ppv);
 }
 
@@ -131,12 +131,69 @@ STDMETHODIMP CFLACSource::QueryFilterInfo(FILTER_INFO* pInfo)
     return S_OK;
 }
 
+STDMETHODIMP CFLACSource::get_AuthorName(BSTR* pbstrAuthorName)
+{
+    CheckPointer(pbstrAuthorName, E_POINTER);
+    HRESULT hr = VFW_E_NOT_FOUND;
+
+    CString author;
+    if (GetFLACStream()->GetComment(_T("artist"), author)) {
+        *pbstrAuthorName = author.AllocSysString();
+        hr = S_OK;
+    }
+
+    return hr;
+}
+
+STDMETHODIMP CFLACSource::get_Title(BSTR* pbstrTitle)
+{
+    CheckPointer(pbstrTitle, E_POINTER);
+    HRESULT hr = VFW_E_NOT_FOUND;
+
+    CString title;
+    if (GetFLACStream()->GetComment(_T("title"), title)) {
+        *pbstrTitle = title.AllocSysString();
+        hr = S_OK;
+    }
+
+    return hr;
+}
+
+STDMETHODIMP CFLACSource::get_Description(BSTR* pbstrDescription)
+{
+    CheckPointer(pbstrDescription, E_POINTER);
+    HRESULT hr = VFW_E_NOT_FOUND;
+
+    CString desc;
+    if (GetFLACStream()->GetComment(_T("description"), desc)) {
+        *pbstrDescription = desc.AllocSysString();
+        hr = S_OK;
+    }
+
+    return hr;
+}
+
+STDMETHODIMP CFLACSource::get_Copyright(BSTR* pbstrCopyright)
+{
+    CheckPointer(pbstrCopyright, E_POINTER);
+    HRESULT hr = VFW_E_NOT_FOUND;
+
+    CString copyright;
+    if (GetFLACStream()->GetComment(_T("copyright"), copyright)
+            || GetFLACStream()->GetComment(_T("date"), copyright)) {
+        *pbstrCopyright = copyright.AllocSysString();
+        hr = S_OK;
+    }
+
+    return hr;
+}
+
 // CFLACStream
 
 CFLACStream::CFLACStream(const WCHAR* wfn, CSource* pParent, HRESULT* phr)
     : CBaseStream(NAME("CFLACStream"), pParent, phr)
     , m_bIsEOF(false)
-    , m_pDecoder(NULL)
+    , m_pDecoder(nullptr)
 {
     CAutoLock cAutoLock(&m_cSharedState);
     CString fn(wfn);
@@ -154,8 +211,9 @@ CFLACStream::CFLACStream(const WCHAR* wfn, CSource* pParent, HRESULT* phr)
             break;
         }
 
-        // We want to get the embedded CUE sheet if it's available
+        // We want to get the embedded CUE sheet and the Vorbis tags if available
         FLAC__stream_decoder_set_metadata_respond(_DECODER_, FLAC__METADATA_TYPE_CUESHEET);
+        FLAC__stream_decoder_set_metadata_respond(_DECODER_, FLAC__METADATA_TYPE_VORBIS_COMMENT);
 
         if (FLAC__STREAM_DECODER_INIT_STATUS_OK != FLAC__stream_decoder_init_stream(_DECODER_,
                 StreamDecoderRead,
@@ -190,7 +248,7 @@ CFLACStream::~CFLACStream()
 {
     if (m_pDecoder) {
         FLAC__stream_decoder_delete(_DECODER_);
-        m_pDecoder = NULL;
+        m_pDecoder = nullptr;
     }
 }
 
@@ -247,7 +305,11 @@ HRESULT CFLACStream::FillBuffer(IMediaSample* pSample, int nFrame, BYTE* pOut, l
     m_file.Read(pOut, len);
     m_file.Seek(llCurFile, CFile::begin);
 
-    m_AvgTimePerFrame = m_rtDuration * len / (m_llFileSize - m_llOffset);
+    if ((_DECODER_)->protected_->blocksize > 0 && (_DECODER_)->protected_->sample_rate > 0) {
+        m_AvgTimePerFrame = (_DECODER_)->protected_->blocksize * UNITS / (_DECODER_)->protected_->sample_rate;
+    } else {
+        m_AvgTimePerFrame = m_rtDuration * len / (m_llFileSize - m_llOffset);
+    }
 
     return S_OK;
 }
@@ -318,25 +380,49 @@ void CFLACStream::UpdateFromMetadata(void* pBuffer)
             FLAC__StreamMetadata_CueSheet_Track& track = pMetadata->data.cue_sheet.tracks[i];
             // Ignore non-audio tracks and lead-out track
             if (track.type != 0
-                || (pMetadata->data.cue_sheet.is_cd && track.number == 170)
-                || (!pMetadata->data.cue_sheet.is_cd && track.number == 255)) {
+                    || (pMetadata->data.cue_sheet.is_cd && track.number == 170)
+                    || (!pMetadata->data.cue_sheet.is_cd && track.number == 255)) {
                 continue;
             }
 
             rt = MILLISECONDS_TO_100NS_UNITS(1000 * track.offset / m_nSamplesPerSec);
-            s.Format(_T("Track %02d"), i + 1);
+            s.Format(_T("Track %02u"), i + 1);
             ((CFLACSource*)m_pFilter)->ChapAppend(rt, s);
 
             if (track.num_indices > 1) {
                 for (int j = 0; j < track.num_indices; ++j) {
                     FLAC__StreamMetadata_CueSheet_Index& index = track.indices[j];
-                    s.Format(_T("+ INDEX %02d"), index.number);
+                    s.Format(_T("+ INDEX %02u"), index.number);
                     REFERENCE_TIME r = rt + MILLISECONDS_TO_100NS_UNITS(1000 * index.offset / m_nSamplesPerSec);
                     ((CFLACSource*)m_pFilter)->ChapAppend(r, s);
                 }
             }
         }
+    } else if (pMetadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT) {
+        for (unsigned int i = 0; i < pMetadata->data.vorbis_comment.num_comments; i++) {
+            FLAC__StreamMetadata_VorbisComment_Entry& entry = pMetadata->data.vorbis_comment.comments[i];
+            CStringA comment((char*)entry.entry, (int)entry.length);
+            int nSepPos = comment.Find("=");
+
+            if (nSepPos > 0) {
+                CString tag = UTF8To16(comment.Left(nSepPos)).MakeLower();
+                CString content = UTF8To16(comment.Mid(nSepPos + 1));
+
+                CString oldContent;
+                if (m_vorbisComments.Lookup(tag, oldContent)) {
+                    m_vorbisComments[tag].Append(_T(", "));
+                    m_vorbisComments[tag].Append(content);
+                } else {
+                    m_vorbisComments[tag] = content;
+                }
+            }
+        }
     }
+}
+
+bool CFLACStream::GetComment(const CString& tag, CString& content) const
+{
+    return !!m_vorbisComments.Lookup(tag, content);
 }
 
 FLAC__StreamDecoderReadStatus StreamDecoderRead(const FLAC__StreamDecoder* decoder, FLAC__byte buffer[], size_t* bytes, void* client_data)
@@ -371,7 +457,7 @@ FLAC__StreamDecoderLengthStatus StreamDecoderLength(const FLAC__StreamDecoder* d
     CFLACStream* pThis = static_cast<CFLACStream*>(client_data);
     CFile* pFile = pThis->GetFile();
 
-    if (pFile == NULL) {
+    if (pFile == nullptr) {
         return FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED;
     } else {
         *stream_length = pFile->GetLength();

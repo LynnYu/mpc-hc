@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -37,7 +37,7 @@ namespace DSObjects
     typedef HRESULT(__stdcall* PTR_MFCreateVideoSampleFromSurface)(IUnknown* pUnkSurface, IMFSample** ppSample);
     typedef HRESULT(__stdcall* PTR_MFCreateVideoMediaType)(const MFVIDEOFORMAT* pVideoFormat, IMFVideoMediaType** ppIVideoMediaType);
 
-    // AVRT.dll
+    // avrt.dll
     typedef HANDLE(__stdcall* PTR_AvSetMmThreadCharacteristicsW)(LPCWSTR TaskName, LPDWORD TaskIndex);
     typedef BOOL (__stdcall* PTR_AvSetMmThreadPriority)(HANDLE AvrtHandle, AVRT_PRIORITY Priority);
     typedef BOOL (__stdcall* PTR_AvRevertMmThreadCharacteristics)(HANDLE AvrtHandle);
@@ -197,6 +197,7 @@ namespace DSObjects
 
         HANDLE                           m_hThread;
         HANDLE                           m_hGetMixerThread;
+        HANDLE                           m_hVSyncThread;
         RENDER_STATE                     m_nRenderState;
 
         CCritSec                         m_SampleQueueLock;
@@ -242,6 +243,8 @@ namespace DSObjects
         HRESULT                          CheckShutdown() const;
         void                             CompleteFrameStep(bool bCancel);
         void                             CheckWaitingSampleFromMixer();
+        static DWORD WINAPI              VSyncThreadStatic(LPVOID lpParam);
+        void                             VSyncThread();
 
         void                             RemoveAllSamples();
         HRESULT                          GetFreeSample(IMFSample** ppSample);
@@ -261,6 +264,10 @@ namespace DSObjects
         LPCTSTR                          GetMediaTypeFormatDesc(IMFMediaType* pMediaType);
 
         // === Functions pointers on Vista / .NET3 specific library
+        HMODULE m_hDXVA2Lib;
+        HMODULE m_hEVRLib;
+        HMODULE m_hAVRTLib;
+
         PTR_DXVA2CreateDirect3DDeviceManager9 pfDXVA2CreateDirect3DDeviceManager9;
         PTR_MFCreateDXSurfaceBuffer           pfMFCreateDXSurfaceBuffer;
         PTR_MFCreateVideoSampleFromSurface    pfMFCreateVideoSampleFromSurface;

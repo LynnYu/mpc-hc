@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2007-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -22,6 +22,7 @@
 
 #include "../../InternalPropertyPage.h"
 #include "IMPCVideoDecFilter.h"
+#include "resource.h"
 #include <afxcmn.h>
 
 class __declspec(uuid("D5AA0389-D274-48e1-BF50-ACB05A56DDE0"))
@@ -32,12 +33,8 @@ class __declspec(uuid("D5AA0389-D274-48e1-BF50-ACB05A56DDE0"))
     CButton     m_grpFFMpeg;
     CStatic     m_txtThreadNumber;
     CComboBox   m_cbThreadNumber;
-    CStatic     m_txtDiscardMode;
-    CComboBox   m_cbDiscardMode;
-    CStatic     m_txtErrorRecognition;
-    CComboBox   m_cbErrorRecognition;
-    CStatic     m_txtIDCTAlgo;
-    CComboBox   m_cbIDCTAlgo;
+    CStatic     m_txtSkipDeblock;
+    CComboBox   m_cbSkipDeblock;
 
     CButton     m_grpDXVA;
     CStatic     m_txtDXVAMode;
@@ -57,14 +54,12 @@ class __declspec(uuid("D5AA0389-D274-48e1-BF50-ACB05A56DDE0"))
     CButton     m_cbDXVA_SD;
 
     enum {
-        IDC_PP_THREAD_NUMBER = 10000,
-        IDC_PP_ENABLE_DEBLOCKING,
-        IDC_PP_DISCARD_MODE,
-        IDC_PP_ERROR_RECOGNITION,
+        IDC_PP_THREAD_COUNT = 10000,
+        IDC_PP_SKIP_DEBLOCK,
         IDC_PP_AR,
+        IDC_PP_INTERLACED_FLAG,
         IDC_PP_DXVA_CHECK,
-        IDC_PP_DXVA_SD,
-        IDC_PP_INTERLACED_FLAG
+        IDC_PP_DXVA_SD
     };
 
 public:
@@ -76,8 +71,8 @@ public:
     void OnDeactivate();
     bool OnApply();
 
-    static LPCTSTR GetWindowTitle() { return _T("Settings"); }
-    static CSize GetWindowSize() { return CSize(350, 325); }
+    static LPCTSTR GetWindowTitle() { return MAKEINTRESOURCE(IDS_FILTER_SETTINGS_CAPTION); }
+    static CSize GetWindowSize() { return CSize(360, 258); }
 
     DECLARE_MESSAGE_MAP()
 };

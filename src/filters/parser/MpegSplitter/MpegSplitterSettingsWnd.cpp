@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -24,7 +24,6 @@
 #include "resource.h"
 #include "../../../mpc-hc/InternalFiltersConfig.h"
 
-#define ResStr(id) CString(MAKEINTRESOURCE(id))
 
 CMpegSplitterSettingsWnd::CMpegSplitterSettingsWnd()
 {
@@ -68,9 +67,6 @@ bool CMpegSplitterSettingsWnd::OnActivate()
     m_cbForcedSub.Create(ResStr(IDS_MPEGSPLITTER_SUB_FORCING), dwStyle | BS_AUTOCHECKBOX | BS_LEFTTEXT, CRect(p, CSize(IPP_SCALE(305), m_fontheight)), this, IDC_PP_SUBTITLE_FORCED);
     p.y += h20;
 
-    m_cbTrackPriority.Create(ResStr(IDS_MPEGSPLITTER_TRACKS_ORDER), dwStyle | BS_AUTOCHECKBOX | BS_LEFTTEXT, CRect(p, CSize(IPP_SCALE(305), m_fontheight)), this, IDC_PP_TRACK_PRIORITY);
-    p.y += h20;
-
     m_cbAlternativeDuration.Create(ResStr(IDS_MPEGSPLITTER_ALT_DUR_CALC), dwStyle | BS_AUTOCHECKBOX | BS_LEFTTEXT, CRect(p, CSize(IPP_SCALE(305), m_fontheight)), this, IDC_PP_ALTERNATIVE_DURATION);
     p.y += h20;
 
@@ -95,14 +91,13 @@ bool CMpegSplitterSettingsWnd::OnActivate()
 
     m_grpTrueHD.Create(ResStr(IDS_MPEGSPLITTER_TRUEHD_OUTPUT), WS_VISIBLE | WS_CHILD | BS_GROUPBOX, CRect(p + CPoint(-5, 0), CSize(IPP_SCALE(305), h20 + h20)), this, (UINT)IDC_STATIC);
     p.y += h20;
-    m_cbTrueHD.Create(_T("TrueHD"), dwStyle | BS_AUTORADIOBUTTON | BS_TOP | BS_MULTILINE | WS_GROUP, CRect(p, CSize(IPP_SCALE(95), m_fontheight + 2)), this, IDC_PP_TRUEHD);
-    m_cbAC3Core.Create(_T("AC-3 core"), dwStyle | BS_AUTORADIOBUTTON | BS_TOP | BS_MULTILINE, CRect(p + CPoint(IPP_SCALE(100), 0), CSize(IPP_SCALE(95), m_fontheight + 2)), this, IDC_PP_AC3CORE);
+    m_cbTrueHD.Create(_T("TrueHD"), dwStyle | BS_AUTORADIOBUTTON | BS_TOP | BS_MULTILINE | WS_GROUP, CRect(p, CSize(IPP_SCALE(60), m_fontheight + 2)), this, IDC_PP_TRUEHD);
+    m_cbAC3Core.Create(_T("AC-3"), dwStyle | BS_AUTORADIOBUTTON | BS_TOP | BS_MULTILINE, CRect(p + CPoint(IPP_SCALE(100), 0), CSize(IPP_SCALE(60), m_fontheight + 2)), this, IDC_PP_AC3CORE);
     m_cbAsIs.Create(ResStr(IDS_MPEGSPLITTER_THD_NOSPLIT), dwStyle | BS_AUTORADIOBUTTON | BS_TOP | BS_MULTILINE, CRect(p + CPoint(IPP_SCALE(200), 0), CSize(IPP_SCALE(95), m_fontheight + 2)), this, IDC_PP_ASIS);
 
     if (m_pMSF) {
         m_cbFastStreamChange.SetCheck(m_pMSF->GetFastStreamChange());
         m_cbForcedSub.SetCheck(m_pMSF->GetForcedSub());
-        m_cbTrackPriority.SetCheck(m_pMSF->GetTrackPriority());
         m_edtAudioLanguageOrder.SetWindowText(m_pMSF->GetAudioLanguageOrder());
         m_edtSubtitlesLanguageOrder.SetWindowText(m_pMSF->GetSubtitlesLanguageOrder());
         m_cbVC1_GuidFlag.SetCurSel(m_pMSF->GetVC1_GuidFlag() - 1);
@@ -136,7 +131,6 @@ bool CMpegSplitterSettingsWnd::OnApply()
     if (m_pMSF) {
         m_pMSF->SetFastStreamChange(m_cbFastStreamChange.GetCheck());
         m_pMSF->SetForcedSub(m_cbForcedSub.GetCheck());
-        m_pMSF->SetTrackPriority(m_cbTrackPriority.GetCheck());
         m_pMSF->SetVC1_GuidFlag(m_cbVC1_GuidFlag.GetCurSel() + 1);
         m_pMSF->SetTrueHD(m_cbTrueHD.GetCheck() ? 0 : m_cbAC3Core.GetCheck() ? 1 : 2);
         m_pMSF->SetAlternativeDuration(m_cbAlternativeDuration.GetCheck());

@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2007-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -22,7 +22,9 @@
 #include <WinNT.h>
 #include <vfwmsgs.h>
 #include <sys/timeb.h>
+#if defined(STANDALONE_FILTER) && defined(_WIN64)
 #include <time.h> // for the _time64 workaround
+#endif
 
 #include "FfmpegContext.h"
 #include "../../../DSUtil/SysVersion.h"
@@ -30,6 +32,7 @@
 #define HAVE_AV_CONFIG_H
 
 extern "C" {
+#pragma warning(push)
 #pragma warning(disable: 4244)
 #include "ffmpeg/libavcodec/avcodec.h"
     // This is kind of a hack but it avoids using a C++ keyword as a struct member name
@@ -37,10 +40,12 @@ extern "C" {
 #include "ffmpeg/libavcodec/mpegvideo.h"
 #undef class
 
+#define new newC    // hack since "h264.h" is using new as a variable
 #include "ffmpeg/libavcodec/h264.h"
+#undef new
 #include "ffmpeg/libavcodec/vc1.h"
 #include "ffmpeg/libavcodec/mpeg12.h"
-#pragma warning(default: 4244)
+#pragma warning(pop)
 
     int av_h264_decode_frame(struct AVCodecContext* avctx, int* nOutPOC, int64_t* rtStartTime, uint8_t* buf, int buf_size);
     int av_vc1_decode_frame(AVCodecContext* avctx, uint8_t* buf, int buf_size, int* nFrameSize);
@@ -52,7 +57,9 @@ extern "C" {
 
 #if defined(STANDALONE_FILTER)
 void* __imp_toupper = toupper;
+#if defined(_WIN64)
 void* __imp_time64 = _time64;
+#endif
 #endif
 
 #define CHECK_AVC_L52_SIZE(w, h) ((w) <= 4096 && (h) <= 4096 && (w) * (h) <= 36864 * 16 * 16)
@@ -75,10 +82,80 @@ const byte ZZ_SCAN8[64] = {
     53, 60, 61, 54, 47, 55, 62, 63
 };
 
+static const WORD PCID_NVIDIA_VP5[] = {
+    // http://us.download.nvidia.com/XFree86/Linux-x86_64/313.26/README/supportedchips.html
+    // Nvidia VDPAU Feature Set D
+    0x0FC6, // GeForce GTX 650
+    0x0FD1, // GeForce GT 650M
+    0x0FD2, // GeForce GT 640M
+    0x0FD4, // GeForce GTX 660M
+    0x0FD5, // GeForce GT 650M
+    0x0FD8, // GeForce GT 640M
+    0x0FD9, // GeForce GT 645M
+    0x0FE0, // GeForce GTX 660M
+    0x0FE1, // GeForce GT 730M
+    0x0FF2, // GRID K1
+    0x0FF9, // Quadro K2000D
+    0x0FFA, // Quadro K600
+    0x0FFB, // Quadro K2000M
+    0x0FFC, // Quadro K1000M
+    0x0FFD, // NVS 510
+    0x0FFE, // Quadro K2000
+    0x0FFF, // Quadro 410
+    0x1005, // GeForce GTX TITAN
+    0x1021, // Tesla K20Xm
+    0x1022, // Tesla K20c
+    0x1026, // Tesla K20s
+    0x1028, // Tesla K20m
+    0x1040, // GeForce GT 520 (not officially supported or typo) (4k tested)
+    0x1042, // GeForce 510
+    0x1048, // GeForce 605
+    0x104A, // GeForce GT 610 (fully tested)
+    0x104B, // GeForce GT 625 (OEM)
+    0x1051, // GeForce GT 520MX
+    0x1054, // GeForce 410M
+    0x1055, // GeForce 410M
+    0x1056, // NVS 4200M
+    0x1057, // NVS 4200M
+    0x105B, // GeForce 705M
+    0x107D, // NVS 310
+    0x1180, // GeForce GTX 680
+    0x1183, // GeForce GTX 660 Ti (fully tested)
+    0x1185, // GeForce GTX 660
+    0x1188, // GeForce GTX 690
+    0x1189, // GeForce GTX 670
+    0x118F, // Tesla K10
+    0x11A0, // GeForce GTX 680M
+    0x11A1, // GeForce GTX 670MX
+    0x11A2, // GeForce GTX 675MX
+    0x11A3, // GeForce GTX 680MX
+    0x11A7, // GeForce GTX 675MX
+    0x11BA, // Quadro K5000
+    0x11BC, // Quadro K5000M
+    0x11BD, // Quadro K4000M
+    0x11BE, // Quadro K3000M
+    0x11BF, // VGX K2
+    0x11C0, // GeForce GTX 660
+    0x11C3, // GeForce GTX 650 Ti
+    0x11C6, // GeForce GTX 650 Ti
+    0x11FA, // Quadro K4000
+};
+
+bool CheckPCID(WORD pcid, const WORD* pPCIDs, size_t len)
+{
+    for (size_t i = 0; i < len; i++) {
+        if (pcid == pPCIDs[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 inline MpegEncContext* GetMpegEncContext(struct AVCodecContext* pAVCtx)
 {
     Mpeg1Context* s1;
-    MpegEncContext* s = NULL;
+    MpegEncContext* s = nullptr;
 
     switch (pAVCtx->codec_id) {
         case AV_CODEC_ID_VC1:
@@ -93,14 +170,19 @@ inline MpegEncContext* GetMpegEncContext(struct AVCodecContext* pAVCtx)
     return s;
 }
 
-int FFH264DecodeBuffer(struct AVCodecContext* pAVCtx, BYTE* pBuffer, UINT nSize, int* pFramePOC, int* pOutPOC, REFERENCE_TIME* pOutrtStart)
+int FFH264DecodeBuffer(struct AVCodecContext* pAVCtx,
+                       BYTE* pBuffer,
+                       UINT nSize,
+                       int* pFramePOC,
+                       int* pOutPOC,
+                       REFERENCE_TIME* pOutrtStart)
 {
     int result = -1;
-    if (pBuffer != NULL) {
+    if (pBuffer != nullptr) {
         H264Context* h = (H264Context*) pAVCtx->priv_data;
         result = av_h264_decode_frame(pAVCtx, pOutPOC, pOutrtStart, pBuffer, nSize);
 
-        if (result != -1 && h->s.current_picture_ptr != NULL && pFramePOC) {
+        if (result != -1 && h->s.current_picture_ptr != nullptr && pFramePOC) {
             *pFramePOC = h->s.current_picture_ptr->poc;
         }
     }
@@ -128,7 +210,14 @@ BOOL DriverVersionCheck(LARGE_INTEGER VideoDriverVersion, int A, int B, int C, i
     return FALSE;
 }
 
-int FFH264CheckCompatibility(int nWidth, int nHeight, struct AVCodecContext* pAVCtx, BYTE* pBuffer, UINT nSize, DWORD nPCIVendor, DWORD nPCIDevice, LARGE_INTEGER VideoDriverVersion)
+int FFH264CheckCompatibility(int nWidth,
+                             int nHeight,
+                             struct AVCodecContext* pAVCtx,
+                             BYTE* pBuffer,
+                             UINT nSize,
+                             DWORD nPCIVendor,
+                             DWORD nPCIDevice,
+                             LARGE_INTEGER VideoDriverVersion)
 {
     H264Context* pContext = (H264Context*) pAVCtx->priv_data;
     SPS* cur_sps;
@@ -136,18 +225,18 @@ int FFH264CheckCompatibility(int nWidth, int nHeight, struct AVCodecContext* pAV
 
     int video_is_level51 = 0;
     int no_level51_support = 1;
-    int too_much_ref_frames = 0;
+    int too_many_ref_frames = 0;
     int profile_higher_than_high = 0;
     int max_ref_frames_dpb41 = min(11, 8388608 / (nWidth * nHeight));
 
-    if (pBuffer != NULL) {
-        av_h264_decode_frame(pAVCtx, NULL, NULL, pBuffer, nSize);
+    if (pBuffer != nullptr) {
+        av_h264_decode_frame(pAVCtx, nullptr, nullptr, pBuffer, nSize);
     }
 
     cur_sps = pContext->sps_buffers[0];
     cur_pps = pContext->pps_buffers[0];
 
-    if (cur_sps != NULL) {
+    if (cur_sps != nullptr) {
         int max_ref_frames = 0;
 
         if (cur_sps->bit_depth_luma > 8 || cur_sps->chroma_format_idc > 1) {
@@ -193,11 +282,13 @@ int FFH264CheckCompatibility(int nWidth, int nHeight, struct AVCodecContext* pAV
 
         // Check maximum allowed number reference frames
         if (cur_sps->ref_frame_count > max_ref_frames) {
-            too_much_ref_frames = 1;
+            too_many_ref_frames = 1;
         }
     }
 
-    return (video_is_level51 * no_level51_support * DXVA_UNSUPPORTED_LEVEL) + (too_much_ref_frames * DXVA_TOO_MANY_REF_FRAMES) + (profile_higher_than_high * DXVA_PROFILE_HIGHER_THAN_HIGH);
+    return (video_is_level51 * no_level51_support * DXVA_UNSUPPORTED_LEVEL) +
+           (too_many_ref_frames * DXVA_TOO_MANY_REF_FRAMES) +
+           (profile_higher_than_high * DXVA_PROFILE_HIGHER_THAN_HIGH);
 }
 
 void CopyScalingMatrix(DXVA_Qmatrix_H264* pDest, PPS* pps, DWORD nPCIVendor)
@@ -205,21 +296,21 @@ void CopyScalingMatrix(DXVA_Qmatrix_H264* pDest, PPS* pps, DWORD nPCIVendor)
     int i, j;
     memset(pDest, 0, sizeof(DXVA_Qmatrix_H264));
     if (nPCIVendor == PCIV_ATI) {
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < 6; i++) {
             for (j = 0; j < 16; j++) {
                 pDest->bScalingLists4x4[i][j] = pps->scaling_matrix4[i][j];
             }
-
+        }
         for (i = 0; i < 64; i++) {
             pDest->bScalingLists8x8[0][i] = pps->scaling_matrix8[0][i];
             pDest->bScalingLists8x8[1][i] = pps->scaling_matrix8[3][i];
         }
     } else {
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < 6; i++) {
             for (j = 0; j < 16; j++) {
                 pDest->bScalingLists4x4[i][j] = pps->scaling_matrix4[i][ZZ_SCAN[j]];
             }
-
+        }
         for (i = 0; i < 64; i++) {
             pDest->bScalingLists8x8[0][i] = pps->scaling_matrix8[0][ZZ_SCAN8[i]];
             pDest->bScalingLists8x8[1][i] = pps->scaling_matrix8[3][ZZ_SCAN8[i]];
@@ -239,7 +330,12 @@ unsigned short FFH264FindRefFrameIndex(unsigned short num_frame, DXVA_PicParams_
     return 127;
 }
 
-HRESULT FFH264BuildPicParams(DXVA_PicParams_H264* pDXVAPicParams, DXVA_Qmatrix_H264* pDXVAScalingMatrix, int* nFieldType, int* nSliceType, struct AVCodecContext* pAVCtx, DWORD nPCIVendor)
+HRESULT FFH264BuildPicParams(DXVA_PicParams_H264* pDXVAPicParams,
+                             DXVA_Qmatrix_H264* pDXVAScalingMatrix,
+                             int* nFieldType,
+                             int* nSliceType,
+                             struct AVCodecContext* pAVCtx,
+                             DWORD nPCIVendor)
 {
     H264Context* h = (H264Context*) pAVCtx->priv_data;
     SPS* cur_sps;
@@ -314,7 +410,7 @@ HRESULT FFH264BuildPicParams(DXVA_PicParams_H264* pDXVAPicParams, DXVA_Qmatrix_H
         pDXVAPicParams->log2_max_frame_num_minus4               = cur_sps->log2_max_frame_num - 4;                  // log2_max_frame_num_minus4;
         pDXVAPicParams->pic_order_cnt_type                      = cur_sps->poc_type;                                // pic_order_cnt_type;
         if (cur_sps->poc_type == 0) {
-            pDXVAPicParams->log2_max_pic_order_cnt_lsb_minus4 = cur_sps->log2_max_poc_lsb - 4;    // log2_max_pic_order_cnt_lsb_minus4;
+            pDXVAPicParams->log2_max_pic_order_cnt_lsb_minus4 = cur_sps->log2_max_poc_lsb - 4;                      // log2_max_pic_order_cnt_lsb_minus4;
         } else if (cur_sps->poc_type == 1) {
             pDXVAPicParams->delta_pic_order_always_zero_flag  = cur_sps->delta_pic_order_always_zero_flag;
         }
@@ -375,14 +471,14 @@ void FFH264UpdateRefFramesList(DXVA_PicParams_H264* pDXVAPicParams, struct AVCod
             AssociatedFlag = pic->long_ref != 0;
         } else {
             // Long list reference frames
-            pic = NULL;
+            pic = nullptr;
             while (!pic && j < h->short_ref_count + 16) {
                 pic = h->long_ref[j++ - h->short_ref_count];
             }
             AssociatedFlag = 1;
         }
 
-        if (pic != NULL) {
+        if (pic != nullptr) {
             pDXVAPicParams->FrameNumList[i] = pic->long_ref ? pic->pic_id : pic->frame_num;
             pDXVAPicParams->FieldOrderCntList[i][0] = 0;
             pDXVAPicParams->FieldOrderCntList[i][1] = 0;
@@ -431,11 +527,12 @@ BOOL FFH264IsRefFrameInUse(int nFrameNum, struct AVCodecContext* pAVCtx)
     return FALSE;
 }
 
-void FF264UpdateRefFrameSliceLong(DXVA_PicParams_H264* pDXVAPicParams, DXVA_Slice_H264_Long* pSlice, struct AVCodecContext* pAVCtx)
+void FF264UpdateRefFrameSliceLong(DXVA_PicParams_H264* pDXVAPicParams,
+                                  DXVA_Slice_H264_Long* pSlice,
+                                  struct AVCodecContext* pAVCtx)
 {
     H264Context* h = (H264Context*) pAVCtx->priv_data;
     MpegEncContext* const s = &h->s;
-    HRESULT hr = E_FAIL;
     unsigned i, list;
 
     for (list = 0; list < 2; list++) {
@@ -463,7 +560,15 @@ void FFH264SetDxvaSliceLong(struct AVCodecContext* pAVCtx, void* pSliceLong)
     h->dxva_slice_long = pSliceLong;
 }
 
-HRESULT FFVC1UpdatePictureParam(DXVA_PictureParameters* pPicParams, struct AVCodecContext* pAVCtx, int* nFieldType, int* nSliceType, BYTE* pBuffer, UINT nSize, UINT* nFrameSize, BOOL b_SecondField, BOOL* b_repeat_pict)
+HRESULT FFVC1UpdatePictureParam(DXVA_PictureParameters* pPicParams,
+                                struct AVCodecContext* pAVCtx,
+                                int* nFieldType,
+                                int* nSliceType,
+                                BYTE* pBuffer,
+                                UINT nSize,
+                                UINT* nFrameSize,
+                                BOOL b_SecondField,
+                                BOOL* b_repeat_pict)
 {
     VC1Context* vc1 = (VC1Context*) pAVCtx->priv_data;
     int out_nFrameSize = 0;
@@ -604,8 +709,17 @@ int MPEG2CheckCompatibility(struct AVCodecContext* pAVCtx, struct AVFrame* pFram
     return (s->chroma_format < 2);
 }
 
-HRESULT FFMpeg2DecodeFrame(DXVA_PictureParameters* pPicParams, DXVA_QmatrixData* pQMatrixData, DXVA_SliceInfo* pSliceInfo, int* nSliceCount,
-                           struct AVCodecContext* pAVCtx, struct AVFrame* pFrame, int* nNextCodecIndex, int* nFieldType, int* nSliceType, BYTE* pBuffer, UINT nSize)
+HRESULT FFMpeg2DecodeFrame(DXVA_PictureParameters* pPicParams,
+                           DXVA_QmatrixData* pQMatrixData,
+                           DXVA_SliceInfo* pSliceInfo,
+                           int* nSliceCount,
+                           struct AVCodecContext* pAVCtx,
+                           struct AVFrame* pFrame,
+                           int* nNextCodecIndex,
+                           int* nFieldType,
+                           int* nSliceType,
+                           BYTE* pBuffer,
+                           UINT nSize)
 {
     int i;
     int got_picture = 0;
@@ -720,7 +834,7 @@ unsigned long FFGetMBNumber(struct AVCodecContext* pAVCtx)
 {
     MpegEncContext* s = GetMpegEncContext(pAVCtx);
 
-    return (s != NULL) ? s->mb_num : 0;
+    return (s != nullptr) ? s->mb_num : 0;
 }
 
 int FFIsSkipped(struct AVCodecContext* pAVCtx)
@@ -775,14 +889,14 @@ int FFGetCodedPicture(struct AVCodecContext* pAVCtx)
 {
     MpegEncContext* s = GetMpegEncContext(pAVCtx);
 
-    return (s != NULL) ? s->current_picture.f.coded_picture_number : 0;
+    return (s != nullptr) ? s->current_picture.f.coded_picture_number : 0;
 }
 
 BOOL FFGetAlternateScan(struct AVCodecContext* pAVCtx)
 {
     MpegEncContext* s = GetMpegEncContext(pAVCtx);
 
-    return (s != NULL) ? s->alternate_scan : 0;
+    return (s != nullptr) ? s->alternate_scan : 0;
 }
 
 BOOL DXVACheckFramesize(int width, int height, DWORD nPCIVendor, DWORD nPCIDevice)
@@ -791,8 +905,8 @@ BOOL DXVACheckFramesize(int width, int height, DWORD nPCIVendor, DWORD nPCIDevic
     height = (height + 15) & ~15; // (height + 15) / 16 * 16;
 
     if (nPCIVendor == PCIV_nVidia) {
-        if (nPCIDevice == PCID_nVidia_GTX660Ti && width <= 4096 && height <= 4096 && width * height <= 4080 * 4080) {
-            // complete test was performed
+        if (CheckPCID((WORD)nPCIDevice, PCID_NVIDIA_VP5, _countof(PCID_NVIDIA_VP5)) && width <= 4096 && height <= 4096 && width * height <= 4080 * 4080) {
+            // tested H.264 on VP5 (GT 610, GTX 660 Ti)
             // 4080x4080 = 65025 macroblocks
             return TRUE;
         } else if (width <= 2032 && height <= 2032 && width * height <= 8190 * 16 * 16) {
@@ -806,7 +920,8 @@ BOOL DXVACheckFramesize(int width, int height, DWORD nPCIVendor, DWORD nPCIDevic
             return TRUE;
         }
     } else if (nPCIVendor == PCIV_Intel && nPCIDevice == PCID_Intel_HD4000) {
-        if (width <= 4096 && height <= 4096 && width * height <= 56672 * 16 * 16) {
+        //if (width <= 4096 && height <= 4096 && width * height <= 56672 * 16 * 16) {
+        if (width <= 4096 && height <= 4096) { // driver v.9.17.10.2867
             // complete test was performed
             return TRUE;
         }

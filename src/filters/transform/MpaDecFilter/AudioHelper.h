@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -20,11 +20,12 @@
 
 #pragma once
 
+#pragma warning(push)
 #pragma warning(disable: 4005 4244)
 extern "C" {
 #include "ffmpeg/libavutil/samplefmt.h"
 }
-#pragma warning(default: 4005 4244)
+#pragma warning(pop)
 
 #ifdef _MSC_VER
 #define bswap_16(x) _byteswap_ushort((unsigned short)(x))
@@ -52,3 +53,12 @@ HRESULT convert_to_int32(enum AVSampleFormat avsf, WORD nChannels, DWORD nSample
 HRESULT convert_to_float(enum AVSampleFormat avsf, WORD nChannels, DWORD nSamples, BYTE* pIn, float* pOut);
 
 HRESULT convert_to_planar_float(enum AVSampleFormat avsf, WORD nChannels, DWORD nSamples, BYTE* pIn, float* pOut);
+
+inline void convert_int24_to_int32(size_t allsamples, BYTE* pIn, int32_t* pOut)
+{
+    for (size_t i = 0; i < allsamples; ++i) {
+        pOut[i] = (uint32_t)pIn[3 * i]     << 8  |
+                  (uint32_t)pIn[3 * i + 1] << 16 |
+                  (uint32_t)pIn[3 * i + 2] << 24;
+    }
+}

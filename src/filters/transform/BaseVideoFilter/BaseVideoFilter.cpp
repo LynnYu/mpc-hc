@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -54,7 +54,7 @@ CBaseVideoFilter::CBaseVideoFilter(TCHAR* pName, LPUNKNOWN lpunk, HRESULT* phr, 
         *phr = E_OUTOFMEMORY;
     }
     if (FAILED(*phr))  {
-        delete m_pInput, m_pInput = NULL;
+        delete m_pInput, m_pInput = nullptr;
         return;
     }
 
@@ -90,7 +90,7 @@ CBasePin* CBaseVideoFilter::GetPin(int n)
         case 1:
             return m_pOutput;
     }
-    return NULL;
+    return nullptr;
 }
 
 HRESULT CBaseVideoFilter::Receive(IMediaSample* pIn)
@@ -133,7 +133,7 @@ HRESULT CBaseVideoFilter::GetDeliveryBuffer(int w, int h, IMediaSample** ppOut)
         return hr;
     }
 
-    if (FAILED(hr = m_pOutput->GetDeliveryBuffer(ppOut, NULL, NULL, 0))) {
+    if (FAILED(hr = m_pOutput->GetDeliveryBuffer(ppOut, nullptr, nullptr, 0))) {
         return hr;
     }
 
@@ -188,7 +188,7 @@ HRESULT CBaseVideoFilter::ReconnectOutput(int w, int h, bool bSendSample, int re
             return E_FAIL;
         }
 
-        BITMAPINFOHEADER* bmi = NULL;
+        BITMAPINFOHEADER* bmi = nullptr;
 
         if (mt.formattype == FORMAT_VideoInfo) {
             VIDEOINFOHEADER* vih = (VIDEOINFOHEADER*)mt.Format();
@@ -224,12 +224,10 @@ HRESULT CBaseVideoFilter::ReconnectOutput(int w, int h, bool bSendSample, int re
 
         hr = m_pOutput->GetConnected()->QueryAccept(&mt);
         ASSERT(SUCCEEDED(hr)); // should better not fail, after all "mt" is the current media type, just with a different resolution
-        HRESULT hr1 = 0;
         CComPtr<IMediaSample> pOut;
-        if (SUCCEEDED(hr1 = m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, &mt))) {
+        if (SUCCEEDED(m_pOutput->GetConnected()->ReceiveConnection(m_pOutput, &mt))) {
             if (bSendSample) {
-                HRESULT hr2 = 0;
-                if (SUCCEEDED(hr2 = m_pOutput->GetDeliveryBuffer(&pOut, NULL, NULL, 0))) {
+                if (SUCCEEDED(m_pOutput->GetDeliveryBuffer(&pOut, nullptr, nullptr, 0))) {
                     AM_MEDIA_TYPE* pmt;
                     if (SUCCEEDED(pOut->GetMediaType(&pmt)) && pmt) {
                         CMediaType mt2 = *pmt;
@@ -614,14 +612,10 @@ HRESULT CBaseVideoFilter::SetMediaType(PIN_DIRECTION dir, const CMediaType* pmt)
         int vsfilter = 0;
         GetOutputSize(m_w, m_h, m_arx, m_ary, RealWidth, RealHeight, vsfilter);
 
-        DWORD a = m_arx, b = m_ary;
-        while (a) {
-            int tmp = a;
-            a = b % tmp;
-            b = tmp;
-        }
-        if (b) {
-            m_arx /= b, m_ary /= b;
+        int gcd = GCD(m_arx, m_ary);
+        if (gcd > 1) {
+            m_arx /= gcd;
+            m_ary /= gcd;
         }
     } else if (dir == PINDIR_OUTPUT) {
         int wout = 0, hout = 0, arxout = 0, aryout = 0;
@@ -642,7 +636,7 @@ HRESULT CBaseVideoFilter::SetMediaType(PIN_DIRECTION dir, const CMediaType* pmt)
 //
 
 CBaseVideoInputAllocator::CBaseVideoInputAllocator(HRESULT* phr)
-    : CMemAllocator(NAME("CBaseVideoInputAllocator"), NULL, phr)
+    : CMemAllocator(NAME("CBaseVideoInputAllocator"), nullptr, phr)
 {
     if (phr) {
         *phr = S_OK;
@@ -676,7 +670,7 @@ STDMETHODIMP CBaseVideoInputAllocator::GetBuffer(IMediaSample** ppBuffer, REFERE
 
 CBaseVideoInputPin::CBaseVideoInputPin(TCHAR* pObjectName, CBaseVideoFilter* pFilter, HRESULT* phr, LPCWSTR pName)
     : CTransformInputPin(pObjectName, pFilter, phr, pName)
-    , m_pAllocator(NULL)
+    , m_pAllocator(nullptr)
 {
 }
 
@@ -689,7 +683,7 @@ STDMETHODIMP CBaseVideoInputPin::GetAllocator(IMemAllocator** ppAllocator)
 {
     CheckPointer(ppAllocator, E_POINTER);
 
-    if (m_pAllocator == NULL) {
+    if (m_pAllocator == nullptr) {
         HRESULT hr = S_OK;
         m_pAllocator = DEBUG_NEW CBaseVideoInputAllocator(&hr);
         m_pAllocator->AddRef();

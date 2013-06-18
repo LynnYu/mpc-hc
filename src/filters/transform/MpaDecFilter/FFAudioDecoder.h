@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -57,7 +57,7 @@ public:
     void    SetDRC(bool fDRC);
 
     bool    RealPrepare(BYTE* p, int buffsize, CPaddedArray& BuffOut);
-    HRESULT Decode(enum AVCodecID nCodecId, BYTE* p, int buffsize, int& size, bool& fResync, CAtlArray<BYTE>& BuffOut, enum AVSampleFormat& samplefmt);
+    HRESULT Decode(enum AVCodecID nCodecId, BYTE* p, int buffsize, int& size, CAtlArray<BYTE>& BuffOut, enum AVSampleFormat& samplefmt);
     void    FlushBuffers();
     void    StreamFinish();
 

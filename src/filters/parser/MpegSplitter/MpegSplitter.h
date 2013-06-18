@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -59,7 +59,7 @@ protected:
 
 private:
     CString m_csAudioLanguageOrder, m_csSubtitlesLanguageOrder;
-    bool m_useFastStreamChange, m_ForcedSub, m_TrackPriority, m_AlternativeDuration;
+    bool m_useFastStreamChange, m_ForcedSub, m_AlternativeDuration;
     int m_nVC1_GuidFlag, m_AC3CoreOnly;
     CCritSec m_csProps;
 
@@ -98,9 +98,6 @@ public:
 
     STDMETHODIMP SetForcedSub(BOOL nValue);
     STDMETHODIMP_(BOOL) GetForcedSub();
-
-    STDMETHODIMP SetTrackPriority(BOOL nValue);
-    STDMETHODIMP_(BOOL) GetTrackPriority();
 
     STDMETHODIMP SetAudioLanguageOrder(WCHAR* nValue);
     STDMETHODIMP_(WCHAR*) GetAudioLanguageOrder();

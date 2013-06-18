@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2010-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -91,7 +91,7 @@ HRESULT CDXVADecoderMpeg2::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME
         if (!m_PictureParams.bSecondField) {
             m_rtStart = rtStart;
             m_rtStop  = rtStop;
-            m_pSampleToDeliver = NULL;
+            m_pSampleToDeliver = nullptr;
             hr = GetFreeSurfaceIndex(m_nSurfaceIndex, &m_pSampleToDeliver, rtStart, rtStop);
             if (FAILED(hr)) {
                 ASSERT(hr == VFW_E_NOT_COMMITTED);      // Normal when stop playing
@@ -101,7 +101,7 @@ HRESULT CDXVADecoderMpeg2::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME
     } else {
         m_rtStart = rtStart;
         m_rtStop  = rtStop;
-        m_pSampleToDeliver = NULL;
+        m_pSampleToDeliver = nullptr;
         hr = GetFreeSurfaceIndex(m_nSurfaceIndex, &m_pSampleToDeliver, rtStart, rtStop);
         if (FAILED(hr)) {
             ASSERT(hr == VFW_E_NOT_COMMITTED);      // Normal when stop playing
@@ -109,7 +109,8 @@ HRESULT CDXVADecoderMpeg2::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME
         }
     }
 
-    if (m_pSampleToDeliver == NULL) {
+    // m_pSampleToDeliver is unused for DXVA1
+    if (GetEngine() == ENGINE_DXVA2 && m_pSampleToDeliver == nullptr) {
         return S_FALSE;
     }
 
@@ -235,7 +236,7 @@ void CDXVADecoderMpeg2::Flush()
     m_wRefPictureIndex[1] = NO_REF_FRAME;
 
     m_nSurfaceIndex = 0;
-    m_pSampleToDeliver = NULL;
+    m_pSampleToDeliver = nullptr;
     m_bSecondField = false;
 
     m_rtStart = _I64_MIN;

@@ -21,8 +21,10 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0D252872-7542-4232-8D02-53F9182AEE15}</ProjectGuid>
     <RootNamespace>Kasumi</RootNamespace>
+    <ProjectName>Kasumi</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\..\..\platform.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
   </PropertyGroup>
@@ -72,6 +74,7 @@
       <AdditionalIncludeDirectories>h;..\h;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -87,6 +90,7 @@
       <AdditionalIncludeDirectories>h;..\h;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -114,6 +118,7 @@
     </ClCompile>
     <ClCompile Include="source\stretchblt_reference.cpp" />
     <ClCompile Include="source\tables.cpp" />
+    <ClCompile Include="source\text.cpp" />
     <ClCompile Include="source\triblt.cpp" />
     <ClCompile Include="source\uberblit.cpp" />
     <ClCompile Include="source\uberblit_16f.cpp" />
@@ -228,12 +233,13 @@
     </YASM>
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\Tuffy.ttf" />
+    <None Include="h\defaultfont.inl" />
     <None Include="source\a_triblt.inc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\system\system.vcxproj">
       <Project>{c2082189-3ecb-4079-91fa-89d3c8a305c0}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

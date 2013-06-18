@@ -26,7 +26,7 @@
 
 // ==> Start patch MPC
 #include <windows.h>
-#include "dxva.h"
+#include "libavcodec/dxva.h"
 // <== End patch MPC
 
 #define DC_VLC_BITS 9
@@ -47,7 +47,7 @@ typedef struct Mpeg1Context {
     AVRational frame_rate_ext;       ///< MPEG-2 specific framerate modificator
     int sync;                        ///< Did we reach a sync point like a GOP/SEQ/KEYFrame?
     int tmpgexs;
-    int parsed_extra;
+    int extradata_decoded;
     // ==> Start patch MPC
     DXVA_SliceInfo* pSliceInfo;
     uint8_t* prev_slice;
@@ -80,6 +80,6 @@ static inline int decode_dc(GetBitContext *gb, int component)
     return diff;
 }
 
-extern int ff_mpeg1_decode_block_intra(MpegEncContext *s, DCTELEM *block, int n);
+extern int ff_mpeg1_decode_block_intra(MpegEncContext *s, int16_t *block, int n);
 
 #endif /* AVCODEC_MPEG12_H */

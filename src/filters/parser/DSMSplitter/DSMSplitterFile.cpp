@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -55,7 +55,6 @@ HRESULT CDSMSplitterFile::Init(IDSMResourceBagImpl& res, IDSMChapterBagImpl& cha
 
     dsmp_t type;
     UINT64 len;
-    int limit = 65536;
 
     // examine the beginning of the file ...
 
@@ -98,7 +97,9 @@ HRESULT CDSMSplitterFile::Init(IDSMResourceBagImpl& res, IDSMChapterBagImpl& cha
 
     // ... and the end
 
-    if (IsRandomAccess())
+    if (IsRandomAccess()) {
+        int limit = MAX_PROBE_SIZE;
+
         for (int i = 1, j = (int)((GetLength() + limit / 2) / limit); i <= j; i++) {
             __int64 seekpos = max(0, (__int64)GetLength() - i * limit);
             Seek(seekpos);
@@ -123,13 +124,14 @@ HRESULT CDSMSplitterFile::Init(IDSMResourceBagImpl& res, IDSMChapterBagImpl& cha
                 Seek(pos + len);
             }
         }
+    }
 
     if (m_rtFirst < 0) {
         m_rtDuration += m_rtFirst;
         m_rtFirst = 0;
     }
 
-    return m_mts.GetCount() > 0 ? S_OK : E_FAIL;
+    return !m_mts.IsEmpty() ? S_OK : E_FAIL;
 }
 
 bool CDSMSplitterFile::Sync(dsmp_t& type, UINT64& len, __int64 limit)
@@ -339,7 +341,7 @@ __int64 CDSMSplitterFile::FindSyncPoint(REFERENCE_TIME rt)
                 if (Read(len, &p, false) && p.rtStart != Packet::INVALID_TIME) {
                     REFERENCE_TIME dt = (p.rtStart -= m_rtFirst) - rt;
                     if (dt >= 0) {
-                        maxpos = max((__int64)syncpos - 65536, minpos);
+                        maxpos = max((__int64)syncpos - MAX_PROBE_SIZE, minpos);
                     } else {
                         minpos = syncpos;
                     }
@@ -395,7 +397,7 @@ __int64 CDSMSplitterFile::FindSyncPoint(REFERENCE_TIME rt)
     __int64 ret = maxpos;
 
     while (maxpos > 0 && !ids.IsEmpty()) {
-        minpos = max(0, maxpos - 65536);
+        minpos = max(0, maxpos - MAX_PROBE_SIZE);
 
         Seek(minpos);
 

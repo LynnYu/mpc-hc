@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2009-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -24,12 +24,12 @@
 
 
 CompositionObject::CompositionObject()
-    : m_pRLEData(NULL)
+    : m_pRLEData(nullptr)
     , m_nRLEDataSize(0)
     , m_nRLEPos(0)
     , m_nColorNumber(0)
 {
-    memsetd(m_Colors, 0xFF000000, sizeof(m_Colors));
+    memsetd(m_Colors, 0xff000000, sizeof(m_Colors));
 }
 
 CompositionObject::~CompositionObject()
@@ -75,7 +75,6 @@ void CompositionObject::RenderHdmv(SubPicDesc& spd)
     }
 
     CGolombBuffer GBuffer(m_pRLEData, m_nRLEDataSize);
-    BYTE  bTemp;
     BYTE  bSwitch;
     BYTE  nPaletteIndex = 0;
     short nCount;
@@ -83,7 +82,7 @@ void CompositionObject::RenderHdmv(SubPicDesc& spd)
     short nY = m_vertical_position;
 
     while ((nY < (m_vertical_position + m_height)) && !GBuffer.IsEOF()) {
-        bTemp = GBuffer.ReadByte();
+        BYTE bTemp = GBuffer.ReadByte();
         if (bTemp != 0) {
             nPaletteIndex = bTemp;
             nCount = 1;
@@ -111,7 +110,7 @@ void CompositionObject::RenderHdmv(SubPicDesc& spd)
         }
 
         if (nCount > 0) {
-            if (nPaletteIndex != 0xFF) {    // Fully transparent (§9.14.4.2.2.1.1)
+            if (nPaletteIndex != 0xFF) {    // Fully transparent (section 9.14.4.2.2.1.1)
                 FillSolidRect(spd, nX, nY, nCount, 1, m_Colors[nPaletteIndex]);
             }
             nX += nCount;
@@ -183,7 +182,6 @@ void CompositionObject::DvbRenderField(SubPicDesc& spd, CGolombBuffer& gb, short
 
 void CompositionObject::Dvb2PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb, short& nX, short& nY)
 {
-    BYTE  bTemp;
     BYTE  nPaletteIndex = 0;
     short nCount;
     bool  bQuit = false;
@@ -191,7 +189,7 @@ void CompositionObject::Dvb2PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb,
     while (!bQuit && !gb.IsEOF()) {
         nCount = 0;
         nPaletteIndex = 0;
-        bTemp = (BYTE)gb.BitRead(2);
+        BYTE bTemp = (BYTE)gb.BitRead(2);
         if (bTemp != 0) {
             nPaletteIndex = bTemp;
             nCount = 1;
@@ -239,7 +237,6 @@ void CompositionObject::Dvb2PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb,
 
 void CompositionObject::Dvb4PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb, short& nX, short& nY)
 {
-    BYTE  bTemp;
     BYTE  nPaletteIndex = 0;
     short nCount;
     bool  bQuit = false;
@@ -247,13 +244,13 @@ void CompositionObject::Dvb4PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb,
     while (!bQuit && !gb.IsEOF()) {
         nCount = 0;
         nPaletteIndex = 0;
-        bTemp = (BYTE)gb.BitRead(4);
+        BYTE bTemp = (BYTE)gb.BitRead(4);
         if (bTemp != 0) {
             nPaletteIndex = bTemp;
             nCount = 1;
         } else {
-            if (gb.BitRead(1) == 0) {                           // switch_1
-                nCount = (short)gb.BitRead(3);                  // run_length_3-9
+            if (gb.BitRead(1) == 0) {                               // switch_1
+                nCount = (short)gb.BitRead(3);                      // run_length_3-9
                 if (nCount != 0) {
                     nCount += 2;
                 } else {
@@ -302,7 +299,6 @@ void CompositionObject::Dvb4PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb,
 
 void CompositionObject::Dvb8PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb, short& nX, short& nY)
 {
-    BYTE  bTemp;
     BYTE  nPaletteIndex = 0;
     short nCount;
     bool  bQuit = false;
@@ -310,7 +306,7 @@ void CompositionObject::Dvb8PixelsCodeString(SubPicDesc& spd, CGolombBuffer& gb,
     while (!bQuit && !gb.IsEOF()) {
         nCount = 0;
         nPaletteIndex = 0;
-        bTemp = gb.ReadByte();
+        BYTE bTemp = gb.ReadByte();
         if (bTemp != 0) {
             nPaletteIndex = bTemp;
             nCount = 1;

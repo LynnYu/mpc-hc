@@ -1,21 +1,8 @@
-// File_Mpeg_Psi - Info for MPEG Stream files
-// Copyright (C) 2006-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // Pre-compilation
@@ -119,6 +106,7 @@ const char* Mpeg_Psi_stream_type_Format(int8u stream_type, int32u format_identif
         case 0x1E : return "MPEG Video"; //ISO/IEC 23002-3
         case 0x1F : return "AVC";
         case 0x20 : return "AVC";
+        case 0x27 : return "HEVC";
         default :
             switch (format_identifier)
             {
@@ -185,6 +173,7 @@ const char* Mpeg_Psi_stream_type_Codec(int8u stream_type, int32u format_identifi
         case 0x1E : return "MPEG-2V";
         case 0x1F : return "AVC";
         case 0x20 : return "AVC";
+        case 0x27 : return "HEVC";
         default :
             switch (format_identifier)
             {
@@ -338,6 +327,7 @@ const char* Mpeg_Psi_stream_type_Info(int8u stream_type, int32u format_identifie
         case 0x1E : return "Auxiliary video data stream as defined in ISO/IEC 23002-3";
         case 0x1F : return "SVC video sub-bitstream of an AVC video stream conforming to one or more profiles defined in Annex G of ITU-T Rec. H.264 | ISO/IEC 14496-10";
         case 0x20 : return "MVC video sub-bitstream of an AVC video stream conforming to one or more profiles defined in Annex H of ITU-T Rec. H.264 | ISO/IEC 14496-10";
+        case 0x27 : return "ITU-T Rec. H.265 | ISO/IEC 23008-2 MPEG-H Part 2 / HEVC video stream";
         case 0x7F : return "IPMP stream";
         default :
             if (stream_type<=0x7F) return "ITU-T Rec. H.222.0 | ISO/IEC 13818-1 reserved";
@@ -1099,7 +1089,7 @@ void File_Mpeg_Psi::Table_00()
 
     //Reseting
     std::vector<int16u> Table_ID_Extension_List;
-    for (complete_stream::stream::table_id::table_id_extensions::iterator Table_ID_Extension=Complete_Stream->Streams[0x0000]->Table_IDs[0x00]->Table_ID_Extensions.begin(); Table_ID_Extension!=Complete_Stream->Streams[0x0000]->Table_IDs[0x00]->Table_ID_Extensions.end(); Table_ID_Extension++)
+    for (complete_stream::stream::table_id::table_id_extensions::iterator Table_ID_Extension=Complete_Stream->Streams[0x0000]->Table_IDs[0x00]->Table_ID_Extensions.begin(); Table_ID_Extension!=Complete_Stream->Streams[0x0000]->Table_IDs[0x00]->Table_ID_Extensions.end(); ++Table_ID_Extension)
         if (Table_ID_Extension->first!=table_id_extension)
             Table_ID_Extension_List.push_back(Table_ID_Extension->first);
     for (size_t Pos=0; Pos<Table_ID_Extension_List.size(); Pos++)
@@ -1135,7 +1125,7 @@ void File_Mpeg_Psi::Table_00()
 
     FILLING_BEGIN();
         //Removing previous elementary_PIDs no more used
-        for (std::map<int16u, complete_stream::transport_stream::program>::iterator program_number_Previous=program_numbers_Previous.begin(); program_number_Previous!=program_numbers_Previous.end(); program_number_Previous++)
+        for (std::map<int16u, complete_stream::transport_stream::program>::iterator program_number_Previous=program_numbers_Previous.begin(); program_number_Previous!=program_numbers_Previous.end(); ++program_number_Previous)
         {
             program_number=program_number_Previous->first;
             program_number_Remove();
@@ -1381,6 +1371,14 @@ void File_Mpeg_Psi::Table_02()
                 }
             #endif //MEDIAINFO_MPEGTS_ALLSTREAMS_YES
         }
+
+        if (Buffer_Offset>=4)
+        {
+            Complete_Stream->Transport_Streams[Complete_Stream->transport_stream_id].Programs[program_number].ExtraInfos_Content["pointer_field"].From_Number(Buffer_Offset-4);
+            Complete_Stream->Transport_Streams[Complete_Stream->transport_stream_id].Programs[program_number].ExtraInfos_Option["pointer_field"]=__T("N NT");
+        }
+        Complete_Stream->Transport_Streams[Complete_Stream->transport_stream_id].Programs[program_number].ExtraInfos_Content["section_length"].From_Number(Element_Size+4);
+        Complete_Stream->Transport_Streams[Complete_Stream->transport_stream_id].Programs[program_number].ExtraInfos_Option["section_length"]=__T("N NT");
     FILLING_END();
 }
 

@@ -1,21 +1,8 @@
-// MediaInfo_Config_MediaInfo - Configuration class
-// Copyright (C) 2005-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // Pre-compilation
@@ -32,6 +19,9 @@
 #include "MediaInfo/MediaInfo_Config_MediaInfo.h"
 #include "MediaInfo/MediaInfo_Config.h"
 #include "ZenLib/ZtringListListF.h"
+#if MEDIAINFO_EVENTS
+    #include "ZenLib/FileName.h"
+#endif //MEDIAINFO_EVENTS
 #if MEDIAINFO_IBI
     #include "base64.h"
 #endif //MEDIAINFO_IBI
@@ -58,18 +48,30 @@ MediaInfo_Config_MediaInfo::MediaInfo_Config_MediaInfo()
     FileIsSub=false;
     FileIsDetectingDuration=false;
     FileIsReferenced=false;
+    FileTestContinuousFileNames=true;
     FileKeepInfo=false;
     FileStopAfterFilled=false;
     FileStopSubStreamAfterFilled=false;
     Audio_MergeMonoStreams=false;
     File_Demux_Interleave=false;
     File_ID_OnlyRoot=false;
+    #if MEDIAINFO_ADVANCED
+        File_IgnoreSequenceFileSize=false;
+        File_Source_List=false;
+    #endif //MEDIAINFO_ADVANCED
+    #if MEDIAINFO_MD5
+        File_Md5=false;
+    #endif //MEDIAINFO_MD5
+    #if defined(MEDIAINFO_REFERENCES_YES)
+        File_CheckSideCarFiles=false;
+    #endif //defined(MEDIAINFO_REFERENCES_YES)
     File_TimeToLive=0;
     File_Buffer_Size_Hint_Pointer=NULL;
     #if MEDIAINFO_NEXTPACKET
         NextPacket=false;
     #endif //MEDIAINFO_NEXTPACKET
     #if MEDIAINFO_FILTER
+        File_Filter_Audio=false;
         File_Filter_HasChanged_=false;
     #endif //MEDIAINFO_FILTER
     #if MEDIAINFO_EVENTS
@@ -81,6 +83,8 @@ MediaInfo_Config_MediaInfo::MediaInfo_Config_MediaInfo()
     #if MEDIAINFO_DEMUX
         Demux_ForceIds=false;
         Demux_PCM_20bitTo16bit=false;
+        Demux_PCM_20bitTo24bit=false;
+        Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10=false;
         Demux_Unpacketize=false;
         Demux_Rate=0;
         Demux_FirstDts=(int64u)-1;
@@ -89,6 +93,7 @@ MediaInfo_Config_MediaInfo::MediaInfo_Config_MediaInfo()
     #endif //MEDIAINFO_DEMUX
     #if MEDIAINFO_IBI
         Ibi_Create=false;
+        Ibi_UseIbiInfoIfAvailable=false;
     #endif //MEDIAINFO_IBI
 
     //Specific
@@ -128,10 +133,13 @@ MediaInfo_Config_MediaInfo::MediaInfo_Config_MediaInfo()
     File_Buffer_Repeat_IsSupported=false;
     File_IsGrowing=false;
     File_IsNotGrowingAnymore=false;
+    File_Current_Offset=0;
+    File_Current_Size=(int64u)-1;
     File_Size=(int64u)-1;
     ParseSpeed=MediaInfoLib::Config.ParseSpeed_Get();
     #if MEDIAINFO_DEMUX
         Demux_EventWasSent=false;
+        Events_Delayed_CurrentSource=NULL;
         #if MEDIAINFO_SEEK
            Demux_IsSeeking=false;
         #endif //MEDIAINFO_SEEK
@@ -201,6 +209,15 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
     {
         return File_IsReferenced_Get()?"1":"0";
     }
+    if (Option_Lower==__T("file_testcontinuousfilenames"))
+    {
+        File_TestContinuousFileNames_Set(!(Value==__T("0") || Value.empty()));
+        return __T("");
+    }
+    else if (Option_Lower==__T("file_testcontinuousfilenames_get"))
+    {
+        return File_TestContinuousFileNames_Get()?"1":"0";
+    }
     if (Option_Lower==__T("file_keepinfo"))
     {
         File_KeepInfo_Set(!(Value==__T("0") || Value.empty()));
@@ -254,6 +271,42 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
     else if (Option_Lower==__T("file_id_onlyroot_get"))
     {
         return File_ID_OnlyRoot_Get()?"1":"0";
+    }
+    else if (Option_Lower==__T("file_ignoresequencefilesize"))
+    {
+        #if MEDIAINFO_MD5
+            File_IgnoreSequenceFileSize_Set(!(Value==__T("0") || Value.empty()));
+            return Ztring();
+        #else //MEDIAINFO_MD5
+            return __T("Disabled due to compilation options");
+        #endif //MEDIAINFO_MD5
+    }
+    else if (Option_Lower==__T("file_source_list"))
+    {
+        #if MEDIAINFO_MD5
+            File_Source_List_Set(!(Value==__T("0") || Value.empty()));
+            return Ztring();
+        #else //MEDIAINFO_MD5
+            return __T("MD5 is disabled due to compilation options");
+        #endif //MEDIAINFO_MD5
+    }
+    else if (Option_Lower==__T("file_md5"))
+    {
+        #if MEDIAINFO_MD5
+            File_Md5_Set(!(Value==__T("0") || Value.empty()));
+            return Ztring();
+        #else //MEDIAINFO_MD5
+            return __T("MD5 is disabled due to compilation options");
+        #endif //MEDIAINFO_MD5
+    }
+    else if (Option_Lower==__T("file_checksidecarfiles"))
+    {
+        #if defined(MEDIAINFO_REFERENCES_YES)
+            File_CheckSideCarFiles_Set(!(Value==__T("0") || Value.empty()));
+            return Ztring();
+        #else //defined(MEDIAINFO_REFERENCES_YES)
+            return __T("Disabled due to compilation options");
+        #endif //defined(MEDIAINFO_REFERENCES_YES)
     }
     else if (Option_Lower==__T("file_filename"))
     {
@@ -321,8 +374,12 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
     else if (Option_Lower==__T("file_filter"))
     {
         #if MEDIAINFO_FILTER
-            File_Filter_Set(Ztring(Value).To_int64u());
-            return __T("");
+            Ztring ValueLowerCase=Ztring(Value).MakeLowerCase();
+            if (ValueLowerCase==__T("audio"))
+                File_Filter_Audio_Set(true);
+            else
+                File_Filter_Set(ValueLowerCase.To_int64u());
+            return Ztring();
         #else //MEDIAINFO_FILTER
             return __T("Filter manager is disabled due to compilation options");
         #endif //MEDIAINFO_FILTER
@@ -373,6 +430,30 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
                 Demux_PCM_20bitTo16bit_Set(false);
             else
                 Demux_PCM_20bitTo16bit_Set(true);
+            return Ztring();
+        #else //MEDIAINFO_DEMUX
+            return __T("Demux manager is disabled due to compilation options");
+        #endif //MEDIAINFO_DEMUX
+    }
+    else if (Option_Lower==__T("file_demux_pcm_20bitto24bit"))
+    {
+        #if MEDIAINFO_DEMUX
+            if (Value.empty())
+                Demux_PCM_20bitTo24bit_Set(false);
+            else
+                Demux_PCM_20bitTo24bit_Set(true);
+            return Ztring();
+        #else //MEDIAINFO_DEMUX
+            return __T("Demux manager is disabled due to compilation options");
+        #endif //MEDIAINFO_DEMUX
+    }
+    else if (Option_Lower==__T("file_demux_avc_transcode_iso14496_15_to_iso14496_10"))
+    {
+        #if MEDIAINFO_DEMUX
+            if (Value.empty())
+                Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10_Set(false);
+            else
+                Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10_Set(true);
             return Ztring();
         #else //MEDIAINFO_DEMUX
             return __T("Demux manager is disabled due to compilation options");
@@ -470,6 +551,18 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
                 Ibi_Create_Set(false);
             else
                 Ibi_Create_Set(true);
+            return Ztring();
+        #else //MEDIAINFO_IBI
+            return __T("IBI support is disabled due to compilation options");
+        #endif //MEDIAINFO_IBI
+    }
+    else if (Option_Lower==__T("file_ibi_useibiinfoifavailable"))
+    {
+        #if MEDIAINFO_IBI
+            if (Value.empty())
+                Ibi_UseIbiInfoIfAvailable_Set(false);
+            else
+                Ibi_UseIbiInfoIfAvailable_Set(true);
             return Ztring();
         #else //MEDIAINFO_IBI
             return __T("IBI support is disabled due to compilation options");
@@ -812,7 +905,24 @@ bool MediaInfo_Config_MediaInfo::File_KeepInfo_Get ()
 }
 
 //***************************************************************************
-// File Keep Info
+// File test continuous file names
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+void MediaInfo_Config_MediaInfo::File_TestContinuousFileNames_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    FileTestContinuousFileNames=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::File_TestContinuousFileNames_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return FileTestContinuousFileNames;
+}
+
+//***************************************************************************
+// Stop after filled
 //***************************************************************************
 
 //---------------------------------------------------------------------------
@@ -879,6 +989,66 @@ bool MediaInfo_Config_MediaInfo::File_ID_OnlyRoot_Get ()
     CriticalSectionLocker CSL(CS);
     return File_ID_OnlyRoot;
 }
+
+//---------------------------------------------------------------------------
+#if MEDIAINFO_MD5
+void MediaInfo_Config_MediaInfo::File_Md5_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    File_Md5=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::File_Md5_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return File_Md5;
+}
+#endif //MEDIAINFO_MD5
+
+//---------------------------------------------------------------------------
+#if defined(MEDIAINFO_REFERENCES_YES)
+void MediaInfo_Config_MediaInfo::File_CheckSideCarFiles_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    File_CheckSideCarFiles=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::File_CheckSideCarFiles_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return File_CheckSideCarFiles;
+}
+#endif //defined(MEDIAINFO_REFERENCES_YES)
+
+//---------------------------------------------------------------------------
+#if MEDIAINFO_ADVANCED
+void MediaInfo_Config_MediaInfo::File_IgnoreSequenceFileSize_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    File_IgnoreSequenceFileSize=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::File_IgnoreSequenceFileSize_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return File_IgnoreSequenceFileSize;
+}
+#endif //MEDIAINFO_ADVANCED
+
+//---------------------------------------------------------------------------
+#if MEDIAINFO_ADVANCED
+void MediaInfo_Config_MediaInfo::File_Source_List_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    File_Source_List=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::File_Source_List_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return File_Source_List;
+}
+#endif //MEDIAINFO_ADVANCED
 
 //***************************************************************************
 // File name from somewhere else
@@ -979,7 +1149,11 @@ Ztring MediaInfo_Config_MediaInfo::File_ForceParser_Get ()
 }
 
 //***************************************************************************
-// File_Buffer_Size_Hint_Pointer
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 //***************************************************************************
 
 //---------------------------------------------------------------------------
@@ -1025,6 +1199,18 @@ bool MediaInfo_Config_MediaInfo::File_Filter_Get ()
     CriticalSectionLocker CSL(CS);
     bool Exist=!File_Filter_16.empty();
     return Exist;
+}
+
+void MediaInfo_Config_MediaInfo::File_Filter_Audio_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    File_Filter_Audio=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::File_Filter_Audio_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return File_Filter_Audio;
 }
 
 bool MediaInfo_Config_MediaInfo::File_Filter_HasChanged ()
@@ -1161,6 +1347,32 @@ bool MediaInfo_Config_MediaInfo::Demux_PCM_20bitTo16bit_Get ()
 }
 
 //---------------------------------------------------------------------------
+void MediaInfo_Config_MediaInfo::Demux_PCM_20bitTo24bit_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    Demux_PCM_20bitTo24bit=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::Demux_PCM_20bitTo24bit_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return Demux_PCM_20bitTo24bit;
+}
+
+//---------------------------------------------------------------------------
+void MediaInfo_Config_MediaInfo::Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return Demux_Avc_Transcode_Iso14496_15_to_Iso14496_10;
+}
+
+//---------------------------------------------------------------------------
 void MediaInfo_Config_MediaInfo::Demux_Unpacketize_Set (bool NewValue)
 {
     CriticalSectionLocker CSL(CS);
@@ -1253,6 +1465,7 @@ string MediaInfo_Config_MediaInfo::Ibi_Get ()
     CriticalSectionLocker CSL(CS);
     return Ibi;
 }
+
 //---------------------------------------------------------------------------
 void MediaInfo_Config_MediaInfo::Ibi_Create_Set (bool NewValue)
 {
@@ -1264,6 +1477,19 @@ bool MediaInfo_Config_MediaInfo::Ibi_Create_Get ()
 {
     CriticalSectionLocker CSL(CS);
     return Ibi_Create;
+}
+
+//---------------------------------------------------------------------------
+void MediaInfo_Config_MediaInfo::Ibi_UseIbiInfoIfAvailable_Set (bool NewValue)
+{
+    CriticalSectionLocker CSL(CS);
+    Ibi_UseIbiInfoIfAvailable=NewValue;
+}
+
+bool MediaInfo_Config_MediaInfo::Ibi_UseIbiInfoIfAvailable_Get ()
+{
+    CriticalSectionLocker CSL(CS);
+    return Ibi_UseIbiInfoIfAvailable;
 }
 #endif //MEDIAINFO_IBI
 
@@ -1421,7 +1647,11 @@ void MediaInfo_Config_MediaInfo::Event_Send (File__Analyze* Source, const int8u*
 
         // Copying buffers
         int32u* EventCode=(int32u*)Data_Content;
-        if (((*EventCode)&0x00FFFFFF)==((MediaInfo_Event_Global_Demux<<8)|4) && Data_Size==sizeof(MediaInfo_Event_Global_Demux_4)) // MediaInfo_Event_Global_Demux_4
+        if (((*EventCode)&0x00FFFFFF)==((MediaInfo_Event_Global_Demux<<8)|4) && Data_Size==sizeof(MediaInfo_Event_Global_Demux_4)) /*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
         {
             MediaInfo_Event_Global_Demux_4* Old=(MediaInfo_Event_Global_Demux_4*)Data_Content;
             MediaInfo_Event_Global_Demux_4* New=(MediaInfo_Event_Global_Demux_4*)Event->Data_Content;
@@ -1456,9 +1686,6 @@ void MediaInfo_Config_MediaInfo::Event_Send (File__Analyze* Source, const int8u*
         if ((Event_Generic->EventCode&0x00FFFFFF)==((MediaInfo_Event_Global_Demux<<8)|0x04)) //Demux version 4
         {
             if (!MediaInfoLib::Config.Demux_Get())
-                return;
-
-            if (File_Name.empty())
                 return;
 
             MediaInfo_Event_Global_Demux_4* Event=(MediaInfo_Event_Global_Demux_4*)Data_Content;
@@ -1497,18 +1724,95 @@ void MediaInfo_Config_MediaInfo::Event_Send (File__Analyze* Source, const int8u*
 
 void MediaInfo_Config_MediaInfo::Event_Accepted (File__Analyze* Source)
 {
+    #if MEDIAINFO_DEMUX && MEDIAINFO_NEXTPACKET
+        if (Demux_EventWasSent && NextPacket_Get())
+        {
+            Events_Delayed_CurrentSource=Source;
+            return;
+        }
+    #endif //MEDIAINFO_DEMUX && MEDIAINFO_NEXTPACKET
+
     for (events_delayed::iterator Event=Events_Delayed.begin(); Event!=Events_Delayed.end(); ++Event)
         if (Event->first==Source)
         {
             for (size_t Pos=0; Pos<Event->second.size(); Pos++)
-            {
-                Event_Send(NULL, Event->second[Pos]->Data_Content, Event->second[Pos]->Data_Size, Event->second[Pos]->File_Name);
-                delete Event->second[Pos]; //Event->second[Pos]=NULL;
-            }
+                if (Event->second[Pos])
+                {
+                    Event_Send(NULL, Event->second[Pos]->Data_Content, Event->second[Pos]->Data_Size, Event->second[Pos]->File_Name);
+
+                    int32u EventCode=*((int32u*)Event->second[Pos]->Data_Content);
+                    bool IsDemux=(EventCode&0x00FFFF00)==(MediaInfo_Event_Global_Demux<<8);
+
+                    if (IsDemux)
+                    {
+                        MediaInfo_Event_Global_Demux_4* Old=(MediaInfo_Event_Global_Demux_4*)Event->second[Pos]->Data_Content;
+                        delete[] Old->Content; Old->Content=NULL;
+                        if (Old->Offsets_Size)
+                        {
+                            delete[] Old->Offsets_Content; Old->Offsets_Content=NULL;
+                        }
+                        if (Old->Offsets_Size)
+                        {
+                            delete[] Old->OriginalContent; Old->OriginalContent=NULL;
+                        }
+                    }
+
+                    delete Event->second[Pos]; Event->second[Pos]=NULL;
+
+                    #if MEDIAINFO_DEMUX && MEDIAINFO_NEXTPACKET
+                        if (IsDemux && NextPacket_Get())
+                        {
+                            Demux_EventWasSent=true;
+                            Event->second.erase(Event->second.begin(), Event->second.begin()+Pos);
+                            Events_Delayed_CurrentSource=Source;
+                            return;
+                        }
+                    #endif //MEDIAINFO_DEMUX && MEDIAINFO_NEXTPACKET
+                }
 
             Events_Delayed.erase(Event->first);
             return;
         }
+}
+
+//---------------------------------------------------------------------------
+void MediaInfo_Config_MediaInfo::Event_SubFile_Start(const Ztring &FileName_Absolute)
+{
+    Ztring FileName_Relative;
+    if (File_Names_RootDirectory.empty())
+    {
+        FileName FN(FileName_Absolute);
+        FileName_Relative=FN.Name_Get();
+        if (!FN.Extension_Get().empty())
+        {
+            FileName_Relative+=__T('.');
+            FileName_Relative+=FN.Extension_Get();
+        }
+    }
+    else
+    {
+        Ztring Root=File_Names_RootDirectory+PathSeparator;
+        FileName_Relative=FileName_Absolute;
+        if (FileName_Relative.find(Root)==0)
+            FileName_Relative.erase(0, Root.size());
+    }
+
+    struct MediaInfo_Event_General_SubFile_Start_0 Event;
+    memset(&Event, 0xFF, sizeof(struct MediaInfo_Event_Generic));
+    Event.EventCode=MediaInfo_EventCode_Create(0, MediaInfo_Event_General_SubFile_Start, 0);
+    Event.EventSize=sizeof(struct MediaInfo_Event_General_SubFile_Start_0);
+    Event.StreamIDs_Size=0;
+
+    std::string FileName_Relative_Ansi=FileName_Relative.To_UTF8();
+    std::wstring FileName_Relative_Unicode=FileName_Relative.To_Unicode();
+    std::string FileName_Absolute_Ansi=FileName_Absolute.To_UTF8();
+    std::wstring FileName_Absolute_Unicode=FileName_Absolute.To_Unicode();
+    Event.FileName_Relative=FileName_Relative_Ansi.c_str();
+    Event.FileName_Relative_Unicode=FileName_Relative_Unicode.c_str();
+    Event.FileName_Absolute=FileName_Absolute_Ansi.c_str();
+    Event.FileName_Absolute_Unicode=FileName_Absolute_Unicode.c_str();
+
+    Event_Send(NULL, (const int8u*)&Event, Event.EventSize);
 }
 #endif //MEDIAINFO_EVENTS
 

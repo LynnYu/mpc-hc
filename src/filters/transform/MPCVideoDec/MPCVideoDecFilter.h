@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2007-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -35,14 +35,21 @@
 #include "H264RandomAccess.h"
 #include <atlpath.h>
 
+// TODO: remove this when it's fixed in MSVC
+// Work around warning C4005: 'XXXX' : macro redefinition
+#pragma warning(push)
+#pragma warning(disable: 4005)
+#include <stdint.h>
+#pragma warning(pop)
+
+
 #define MPCVideoDecName L"MPC Video Decoder"
 
 #define MAX_BUFF_TIME   20
 
 #define CHECK_HR_TRACE(x)                   \
     hr = ##x;                               \
-    if (FAILED(hr))                         \
-    {                                       \
+    if (FAILED(hr)) {                       \
         TRACE(_T("Error : 0x%08x\n"), hr);  \
         ASSERT(hr == VFW_E_NOT_COMMITTED);  \
         return hr;                          \
@@ -73,9 +80,9 @@ typedef struct {
 } BUFFER_TIME;
 
 typedef struct {
-    bool video_after_seek;
-    __int32 kf_pts;     ///< timestamp of next video keyframe
-    __int64 kf_base;    ///< timestamp of the prev. video keyframe
+    bool    video_after_seek;
+    int     kf_pts;     ///< timestamp of next video keyframe
+    int64_t kf_base;    ///< timestamp of the previous video keyframe
 } RMDemuxContext;
 
 class __declspec(uuid("008BAC12-FBAF-497b-9670-BC6F6FBAE2C4"))
@@ -96,11 +103,12 @@ protected:
     CCpuId* m_pCpuId;
     CCritSec m_csProps;
 
+    CAutoPtr<bool> m_DXVAFilters;
+    CAutoPtr<bool> m_FFmpegFilters;
+
     // === Persistants parameters (registry)
     int m_nThreadNumber;
     int m_nDiscardMode;
-    int m_nErrorRecognition;
-    int m_nIDCTAlgo;
     bool m_bDXVACompatible;
     int m_nActiveCodecs;
     int m_nARMode;
@@ -146,7 +154,7 @@ protected:
 
     bool m_bUseDXVA;
     bool m_bUseFFmpeg;
-    CSize m_sar;
+    CSize m_par;
     SwsContext* m_pSwsContext;
     unsigned __int64 m_nOutCsp;
     CSize m_pOutSize;               // Picture size on output pin
@@ -209,9 +217,6 @@ public:
     const static AMOVIESETUP_MEDIATYPE sudPinTypesOut[];
     const static int sudPinTypesOutCount;
 
-    static const bool* FFmpegFilters;
-    static const bool* DXVAFilters;
-
     CMPCVideoDecFilter(LPUNKNOWN lpunk, HRESULT* phr);
     virtual ~CMPCVideoDecFilter();
 
@@ -223,6 +228,9 @@ public:
 
     void UpdateFrameTime(REFERENCE_TIME& rtStart, REFERENCE_TIME& rtStop, bool b_repeat_pict = false);
     CString GetFileExtension();
+
+    void SetDXVAFilters(CAutoPtr<bool> DXVAFilters) { m_DXVAFilters = DXVAFilters; };
+    void SetFFmpegFilters(CAutoPtr<bool> FFmpegFilters) {  m_FFmpegFilters = FFmpegFilters; };
 
     // === Overriden DirectShow functions
     HRESULT SetMediaType(PIN_DIRECTION direction, const CMediaType* pmt);
@@ -249,10 +257,6 @@ public:
     STDMETHODIMP_(int) GetThreadNumber();
     STDMETHOD(SetDiscardMode(int nValue));
     STDMETHOD_(int, GetDiscardMode());
-    STDMETHOD(SetErrorRecognition(int nValue));
-    STDMETHOD_(int, GetErrorRecognition());
-    STDMETHOD(SetIDCTAlgo(int nValue));
-    STDMETHOD_(int, GetIDCTAlgo());
     STDMETHOD_(GUID*, GetDXVADecoderGuid());
     STDMETHOD(SetActiveCodecs(MPC_VIDEO_CODEC nValue));
     STDMETHOD_(MPC_VIDEO_CODEC, GetActiveCodecs());

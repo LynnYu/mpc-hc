@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -28,6 +28,7 @@
 #include "MediaFormats.h"
 #include "DVBChannel.h"
 #include "MediaPositionList.h"
+#include "../filters/switcher/AudioSwitcher/AudioSwitcher.h"
 
 #include <afxsock.h>
 
@@ -127,11 +128,11 @@ enum MCE_RAW_INPUT {
     MCE_MEDIA_PREVIOUSTRACK = 0x0100B6
 };
 
-#define AUDRNDT_NULL_COMP _T("Null Audio Renderer (Any)")
-#define AUDRNDT_NULL_UNCOMP _T("Null Audio Renderer (Uncompressed)")
-#define AUDRNDT_MPC _T("MPC Audio Renderer")
+#define AUDRNDT_NULL_COMP       _T("Null Audio Renderer (Any)")
+#define AUDRNDT_NULL_UNCOMP     _T("Null Audio Renderer (Uncompressed)")
+#define AUDRNDT_MPC             _T("MPC Audio Renderer")
 
-#define DEFAULT_SUBTITLE_PATHS _T(".;.\\subtitles;.\\subs")
+#define DEFAULT_SUBTITLE_PATHS  _T(".;.\\subtitles;.\\subs")
 #define DEFAULT_JUMPDISTANCE_1  1000
 #define DEFAULT_JUMPDISTANCE_2  5000
 #define DEFAULT_JUMPDISTANCE_3  20000
@@ -162,6 +163,18 @@ enum {
     TIME_TOOLTIP_BELOW_SEEKBAR
 };
 
+enum DVB_RebuildFilterGraph {
+    DVB_REBUILD_FG_NEVER = 0,
+    DVB_REBUILD_FG_WHEN_SWITCHING,
+    DVB_REBUILD_FG_ALWAYS
+};
+
+enum DVB_StopFilterGraph {
+    DVB_STOP_FG_NEVER = 0,
+    DVB_STOP_FG_WHEN_SWITCHING,
+    DVB_STOP_FG_ALWAYS
+};
+
 #pragma pack(push, 1)
 typedef struct {
     bool fValid;
@@ -178,10 +191,10 @@ typedef struct {
     bool fIsData;
 } fpsmode;
 
-#define MaxFpsCount 30
+#define MAX_FPS_COUNT 30
 typedef struct {
     bool bEnabled;
-    fpsmode dmFullscreenRes[MaxFpsCount];
+    fpsmode dmFullscreenRes[MAX_FPS_COUNT];
     bool bApplyDefault;
 }   AChFR; //AutoChangeFullscrRes
 #pragma pack(pop)
@@ -410,6 +423,7 @@ public:
     bool            fLoopForever;
     bool            fRewind;
     bool            fRememberZoomLevel;
+    int             nAutoFitFactor;
     int             iZoomLevel;
     CStringW        strAudiosLanguageOrder;
     CStringW        strSubtitlesLanguageOrder;
@@ -418,6 +432,8 @@ public:
     bool            fAutoloadAudio;
     bool            fAutoloadSubtitles;
     bool            fBlockVSFilter;
+    UINT            nVolumeStep;
+    UINT            nSpeedStep;
 
     // DVD/OGM
     bool            fUseDVDPath;
@@ -463,6 +479,8 @@ public:
     bool            fBDAIgnoreEncryptedChannels;
     UINT            nDVBLastChannel;
     CAtlList<CDVBChannel> m_DVBChannels;
+    DVB_RebuildFilterGraph nDVBRebuildFilterGraph;
+    DVB_StopFilterGraph nDVBStopFilterGraph;
 
     // Internal Filters
     bool            SrcFilters[SRC_LAST + !SRC_LAST];
@@ -473,14 +491,15 @@ public:
     // Audio Switcher
     bool            fEnableAudioSwitcher;
     bool            fAudioNormalize;
+    UINT            nAudioMaxNormFactor;
     bool            fAudioNormalizeRecover;
-    float           dAudioBoost_dB;
+    UINT            nAudioBoost;
     bool            fDownSampleTo441;
     bool            fAudioTimeShift;
     int             iAudioTimeShift;
     bool            fCustomChannelMapping;
     int             nSpeakerChannels;
-    DWORD           pSpeakerToChannelMap[18][18];
+    DWORD           pSpeakerToChannelMap[AS_MAX_CHANNELS][AS_MAX_CHANNELS];
 
     // External Filters
     CAutoPtrList<FilterOverride> m_filters;
@@ -494,8 +513,10 @@ public:
     STSStyle        subdefstyle;
 
     // Misc
+    bool            bPreferDefaultForcedSubtitles;
     bool            fPrioritizeExternalSubtitles;
     bool            fDisableInternalSubtitles;
+    bool            bAllowOverridingExternalSplitterChoice;
     CString         strSubtitlePaths;
     CString         strISDb;
 
@@ -505,7 +526,7 @@ public:
     int             nJumpDistL;
     bool            fFastSeek;
     bool            fShowChapters;
-    bool            fNotifyMSN;
+    bool            bNotifySkype;
     bool            fPreventMinimize;
     bool            fUseWin7TaskBar;
     bool            fLCDSupport;
@@ -592,7 +613,6 @@ public:
     CString         SelectedAudioRenderer() const;
 
 private:
-
     CString         SrcFiltersKeys[SRC_LAST + !SRC_LAST];
     CString         TraFiltersKeys[TRA_LAST + !TRA_LAST];
     CString         DXVAFiltersKeys[TRA_DXVA_LAST + !TRA_DXVA_LAST];
@@ -603,22 +623,29 @@ private:
 
     void            CreateCommands();
 
+    void            SaveExternalFilters(CAutoPtrList<FilterOverride>& filters, LPCTSTR baseKey = IDS_R_EXTERNAL_FILTERS);
+    void            LoadExternalFilters(CAutoPtrList<FilterOverride>& filters, LPCTSTR baseKey = IDS_R_EXTERNAL_FILTERS);
+    void            ConvertOldExternalFiltersList();
+
+    void            UpdateRenderersData(bool fSave);
+    friend void     CRenderersSettings::UpdateData(bool bSave);
+
 public:
     CAppSettings();
     virtual ~CAppSettings();
+
     void            SaveSettings();
-    void            SaveExternalFilters();
     void            LoadSettings();
+    void            SaveExternalFilters() { if (fInitialized) { SaveExternalFilters(m_filters); } };
 
     void            GetFav(favtype ft, CAtlList<CString>& sl) const;
     void            SetFav(favtype ft, CAtlList<CString>& sl);
     void            AddFav(favtype ft, CString s);
+
     CDVBChannel*    FindChannelByPref(int nPrefNumber);
 
     bool            GetAllowMultiInst() const;
+
     static bool     IsVSFilterInstalled();
     static bool     HasEVR();
-private:
-    void            UpdateRenderersData(bool fSave);
-    friend void     CRenderersSettings::UpdateData(bool bSave);
 };

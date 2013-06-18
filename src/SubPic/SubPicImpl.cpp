@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -28,11 +28,17 @@
 //
 
 CSubPicImpl::CSubPicImpl()
-    : CUnknown(NAME("CSubPicImpl"), NULL)
-    , m_rtStart(0), m_rtStop(0)
-    , m_rtSegmentStart(0), m_rtSegmentStop(0)
-    , m_rcDirty(0, 0, 0, 0), m_maxsize(0, 0), m_size(0, 0), m_vidrect(0, 0, 0, 0)
-    , m_VirtualTextureSize(0, 0), m_VirtualTextureTopLeft(0, 0)
+    : CUnknown(NAME("CSubPicImpl"), nullptr)
+    , m_rtStart(0)
+    , m_rtStop(0)
+    , m_rtSegmentStart(0)
+    , m_rtSegmentStop(0)
+    , m_rcDirty(0, 0, 0, 0)
+    , m_maxsize(0, 0)
+    , m_size(0, 0)
+    , m_vidrect(0, 0, 0, 0)
+    , m_VirtualTextureSize(0, 0)
+    , m_VirtualTextureTopLeft(0, 0)
 {
 }
 
@@ -113,7 +119,7 @@ STDMETHODIMP CSubPicImpl::GetSourceAndDest(SIZE* pSize, RECT* pRcSource, RECT* p
     CheckPointer(pRcDest,   E_POINTER);
 
     if (m_size.cx > 0 && m_size.cy > 0) {
-        CRect       rcTemp = m_rcDirty;
+        CRect rcTemp = m_rcDirty;
 
         // FIXME
         rcTemp.DeflateRect(1, 1);
@@ -158,10 +164,10 @@ STDMETHODIMP CSubPicImpl::SetSize(SIZE size, RECT vidrect)
     }
 
     if (m_size.cx != size.cx || m_size.cy != size.cy) {
-        m_vidrect.top = MulDiv(m_vidrect.top, m_size.cx, size.cx);
+        m_vidrect.top    = MulDiv(m_vidrect.top,    m_size.cx, size.cx);
         m_vidrect.bottom = MulDiv(m_vidrect.bottom, m_size.cx, size.cx);
-        m_vidrect.left = MulDiv(m_vidrect.left, m_size.cy, size.cy);
-        m_vidrect.right = MulDiv(m_vidrect.right, m_size.cy, size.cy);
+        m_vidrect.left   = MulDiv(m_vidrect.left,   m_size.cy, size.cy);
+        m_vidrect.right  = MulDiv(m_vidrect.right,  m_size.cy, size.cy);
     }
     m_VirtualTextureSize = m_size;
 
@@ -181,7 +187,7 @@ STDMETHODIMP CSubPicImpl::SetVirtualTextureSize(const SIZE pSize, const POINT pT
 //
 
 CSubPicAllocatorImpl::CSubPicAllocatorImpl(SIZE cursize, bool fDynamicWriteOnly, bool fPow2Textures)
-    : CUnknown(NAME("ISubPicAllocatorImpl"), NULL)
+    : CUnknown(NAME("ISubPicAllocatorImpl"), nullptr)
     , m_cursize(cursize)
     , m_fDynamicWriteOnly(fDynamicWriteOnly)
     , m_fPow2Textures(fPow2Textures)
@@ -219,7 +225,7 @@ STDMETHODIMP CSubPicAllocatorImpl::GetStatic(ISubPic** ppSubPic)
     SIZE maxSize;
     if (m_pStatic && (FAILED(m_pStatic->GetMaxSize(&maxSize)) || maxSize.cx < m_cursize.cx || maxSize.cy < m_cursize.cy)) {
         m_pStatic.Release();
-        m_pStatic = NULL;
+        m_pStatic = nullptr;
     }
 
     if (!m_pStatic) {
@@ -257,6 +263,6 @@ STDMETHODIMP_(bool) CSubPicAllocatorImpl::IsDynamicWriteOnly()
 
 STDMETHODIMP CSubPicAllocatorImpl::ChangeDevice(IUnknown* pDev)
 {
-    m_pStatic = NULL;
+    m_pStatic = nullptr;
     return S_OK;
 }

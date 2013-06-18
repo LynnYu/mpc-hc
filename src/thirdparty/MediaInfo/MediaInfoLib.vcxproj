@@ -22,8 +22,10 @@
     <ProjectGuid>{20E0F8D6-213C-460B-B361-9C725CB375C7}</ProjectGuid>
     <RootNamespace>MediaInfoLib</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <ProjectName>MediaInfoLib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\..\platform.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
@@ -66,7 +68,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;ThirdParty\base64;ThirdParty\tinyxml2;..\ZenLib;..\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;WIN32_LEAN_AND_MEAN;MEDIAINFO_MINIMAL_YES;MEDIAINFO_TRACE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;CURL_STATICLIB;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_ADVANCED_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;CURL_STATICLIB;MEDIAINFO_ADVANCED_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;MEDIAINFO_MD5_NO;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_TRACE_NO;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
       <EnablePREfast>false</EnablePREfast>
@@ -75,15 +77,16 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;ThirdParty\base64;ThirdParty\tinyxml2;..\ZenLib;..\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;WIN32_LEAN_AND_MEAN;MEDIAINFO_MINIMAL_YES;MEDIAINFO_TRACE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;CURL_STATICLIB;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_ADVANCED_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;CURL_STATICLIB;MEDIAINFO_ADVANCED_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;MEDIAINFO_MD5_NO;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_TRACE_NO;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;ThirdParty\base64;ThirdParty\tinyxml2;..\ZenLib;..\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;WIN32_LEAN_AND_MEAN;MEDIAINFO_MINIMAL_YES;MEDIAINFO_TRACE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;CURL_STATICLIB;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_ADVANCED_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;CURL_STATICLIB;MEDIAINFO_ADVANCED_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;MEDIAINFO_MD5_NO;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_TRACE_NO;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
       <EnablePREfast>false</EnablePREfast>
@@ -92,12 +95,18 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;ThirdParty\base64;ThirdParty\tinyxml2;..\ZenLib;..\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;WIN32_LEAN_AND_MEAN;MEDIAINFO_MINIMAL_YES;MEDIAINFO_TRACE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;CURL_STATICLIB;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_ADVANCED_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;CURL_STATICLIB;MEDIAINFO_ADVANCED_NO;MEDIAINFO_ARCHIVE_NO;MEDIAINFO_DEMUX_NO;MEDIAINFO_DVDIF_ANALYZE_NO;MEDIAINFO_EVENTS_NO;MEDIAINFO_IMAGE_NO;MEDIAINFO_LIBCURL_NO;MEDIAINFO_LIBMMS_NO;MEDIAINFO_MD5_NO;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_N19_NO;MEDIAINFO_OTHERTEXT_NO;MEDIAINFO_TRACE_NO;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MediaInfo\Multiple\File_Pmp.h" />
+    <ClInclude Include="MediaInfo\Text\File_SubRip.h" />
+    <ClInclude Include="MediaInfo\Text\File_TimedText.h" />
+    <ClInclude Include="MediaInfo\Text\File_Ttml.h" />
+    <ClInclude Include="MediaInfo\Video\File_Hevc.h" />
     <ClInclude Include="ThirdParty\base64\base64.h" />
     <ClInclude Include="ThirdParty\tinyxml2\tinyxml2.h" />
     <ClInclude Include="MediaInfo\Archive\File_7z.h" />
@@ -116,7 +125,6 @@
     <ClInclude Include="MediaInfo\Audio\File_Aac_GeneralAudio_Sbr_Ps.h" />
     <ClInclude Include="MediaInfo\Audio\File_Ac3.h" />
     <ClInclude Include="MediaInfo\Audio\File_Adpcm.h" />
-    <ClInclude Include="MediaInfo\Audio\File_Aes3.h" />
     <ClInclude Include="MediaInfo\Audio\File_Als.h" />
     <ClInclude Include="MediaInfo\Audio\File_Amr.h" />
     <ClInclude Include="MediaInfo\Audio\File_Amv.h" />
@@ -243,6 +251,7 @@
     <ClInclude Include="MediaInfo\Tag\File_Lyrics3v2.h" />
     <ClInclude Include="MediaInfo\Tag\File_VorbisCom.h" />
     <ClInclude Include="MediaInfo\Tag\File__Tags.h" />
+    <ClInclude Include="MediaInfo\Text\File_AribStdB24B37.h" />
     <ClInclude Include="MediaInfo\Text\File_Cdp.h" />
     <ClInclude Include="MediaInfo\Text\File_Cmml.h" />
     <ClInclude Include="MediaInfo\Text\File_DtvccTransport.h" />
@@ -257,6 +266,7 @@
     <ClInclude Include="MediaInfo\Text\File_Scte20.h" />
     <ClInclude Include="MediaInfo\Text\File_Teletext.h" />
     <ClInclude Include="MediaInfo\Video\File_AfdBarData.h" />
+    <ClInclude Include="MediaInfo\Video\File_Aic.h" />
     <ClInclude Include="MediaInfo\Video\File_Avc.h" />
     <ClInclude Include="MediaInfo\Video\File_AvsV.h" />
     <ClInclude Include="MediaInfo\Video\File_Dirac.h" />
@@ -292,7 +302,6 @@
     <ClCompile Include="MediaInfo\Audio\File_Aac_Others.cpp" />
     <ClCompile Include="MediaInfo\Audio\File_Ac3.cpp" />
     <ClCompile Include="MediaInfo\Audio\File_Adpcm.cpp" />
-    <ClCompile Include="MediaInfo\Audio\File_Aes3.cpp" />
     <ClCompile Include="MediaInfo\Audio\File_Als.cpp" />
     <ClCompile Include="MediaInfo\Audio\File_Amr.cpp" />
     <ClCompile Include="MediaInfo\Audio\File_Amv.cpp" />
@@ -365,10 +374,14 @@
     <ClCompile Include="MediaInfo\MediaInfo_File.cpp" />
     <ClCompile Include="MediaInfo\MediaInfo_Inform.cpp" />
     <ClCompile Include="MediaInfo\MediaInfo_Internal.cpp" />
+    <ClCompile Include="MediaInfo\Multiple\File_Pmp.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File__ReferenceFilesHelper.cpp" />
     <ClCompile Include="MediaInfo\PreComp.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="MediaInfo\Text\File_SubRip.cpp" />
+    <ClCompile Include="MediaInfo\Text\File_TimedText.cpp" />
+    <ClCompile Include="MediaInfo\Text\File_Ttml.cpp" />
     <ClCompile Include="MediaInfo\TimeCode.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_Ancillary.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_Bdmv.cpp" />
@@ -424,6 +437,7 @@
     <ClCompile Include="MediaInfo\Tag\File_Lyrics3v2.cpp" />
     <ClCompile Include="MediaInfo\Tag\File_VorbisCom.cpp" />
     <ClCompile Include="MediaInfo\Tag\File__Tags.cpp" />
+    <ClCompile Include="MediaInfo\Text\File_AribStdB24B37.cpp" />
     <ClCompile Include="MediaInfo\Text\File_Cdp.cpp" />
     <ClCompile Include="MediaInfo\Text\File_Cmml.cpp" />
     <ClCompile Include="MediaInfo\Text\File_DtvccTransport.cpp" />
@@ -438,6 +452,7 @@
     <ClCompile Include="MediaInfo\Text\File_Scte20.cpp" />
     <ClCompile Include="MediaInfo\Text\File_Teletext.cpp" />
     <ClCompile Include="MediaInfo\Video\File_AfdBarData.cpp" />
+    <ClCompile Include="MediaInfo\Video\File_Aic.cpp" />
     <ClCompile Include="MediaInfo\Video\File_Avc.cpp" />
     <ClCompile Include="MediaInfo\Video\File_Avc_Duplicate.cpp" />
     <ClCompile Include="MediaInfo\Video\File_AvsV.cpp" />
@@ -445,6 +460,7 @@
     <ClCompile Include="MediaInfo\Video\File_Flic.cpp" />
     <ClCompile Include="MediaInfo\Video\File_Fraps.cpp" />
     <ClCompile Include="MediaInfo\Video\File_H263.cpp" />
+    <ClCompile Include="MediaInfo\Video\File_Hevc.cpp" />
     <ClCompile Include="MediaInfo\Video\File_Lagarith.cpp" />
     <ClCompile Include="MediaInfo\Video\File_Mpeg4v.cpp" />
     <ClCompile Include="MediaInfo\Video\File_Mpegv.cpp" />

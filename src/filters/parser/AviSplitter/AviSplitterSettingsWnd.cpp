@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -24,7 +24,6 @@
 #include "resource.h"
 #include "../../../mpc-hc/InternalFiltersConfig.h"
 
-#define ResStr(id) CString(MAKEINTRESOURCE(id))
 
 CAviSplitterSettingsWnd::CAviSplitterSettingsWnd()
 {
@@ -66,6 +65,7 @@ bool CAviSplitterSettingsWnd::OnActivate()
     if (m_pASF) {
         m_cbNonInterleavedFilesSupport.SetCheck(m_pASF->GetNonInterleavedFilesSupport());
     }
+    m_cbNonInterleavedFilesSupport.EnableWindow(FALSE);
 
     for (CWnd* pWnd = GetWindow(GW_CHILD); pWnd; pWnd = pWnd->GetNextWindow()) {
         pWnd->SetFont(&m_font, FALSE);

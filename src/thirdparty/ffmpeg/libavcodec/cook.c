@@ -49,6 +49,7 @@
 #include "dsputil.h"
 #include "bytestream.h"
 #include "fft.h"
+#include "internal.h"
 #include "sinewin.h"
 
 #include "cookdata.h"
@@ -122,7 +123,6 @@ typedef struct cook {
 
     AVCodecContext*     avctx;
     DSPContext          dsp;
-    AVFrame             frame;
     GetBitContext       gb;
     /* stream data */
     int                 num_vectors;
@@ -767,7 +767,7 @@ static int decouple_info(COOKContext *q, COOKSubpacket *p, int *decouple_tab)
     return 0;
 }
 
-/*
+/**
  * function decouples a pair of signals from a single signal via multiplication.
  *
  * @param q                 pointer to the COOKContext
@@ -955,6 +955,7 @@ static int decode_subpacket(COOKContext *q, COOKSubpacket *p,
 static int cook_decode_frame(AVCodecContext *avctx, void *data,
                              int *got_frame_ptr, AVPacket *avpkt)
 {
+    AVFrame *frame     = data;
     const uint8_t *buf = avpkt->data;
     int buf_size = avpkt->size;
     COOKContext *q = avctx->priv_data;
@@ -968,12 +969,12 @@ static int cook_decode_frame(AVCodecContext *avctx, void *data,
 
     /* get output buffer */
     if (q->discarded_packets >= 2) {
-        q->frame.nb_samples = q->samples_per_channel;
-        if ((ret = avctx->get_buffer(avctx, &q->frame)) < 0) {
+        frame->nb_samples = q->samples_per_channel;
+        if ((ret = ff_get_buffer(avctx, frame)) < 0) {
             av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
             return ret;
         }
-        samples = (float **)q->frame.extended_data;
+        samples = (float **)frame->extended_data;
     }
 
     /* estimate subpacket sizes */
@@ -1014,8 +1015,7 @@ static int cook_decode_frame(AVCodecContext *avctx, void *data,
         return avctx->block_align;
     }
 
-    *got_frame_ptr    = 1;
-    *(AVFrame *) data = q->frame;
+    *got_frame_ptr = 1;
 
     return avctx->block_align;
 }
@@ -1197,6 +1197,10 @@ static av_cold int cook_decode_init(AVCodecContext *avctx)
             av_log_ask_for_sample(avctx, "subbands > 50\n");
             return AVERROR_PATCHWELCOME;
         }
+        if (q->subpacket[s].subbands == 0) {
+            av_log_ask_for_sample(avctx, "subbands is 0\n");
+            return AVERROR_PATCHWELCOME;
+        }
         q->subpacket[s].gains1.now      = q->subpacket[s].gain_1;
         q->subpacket[s].gains1.previous = q->subpacket[s].gain_2;
         q->subpacket[s].gains2.now      = q->subpacket[s].gain_3;
@@ -1263,9 +1267,6 @@ static av_cold int cook_decode_init(AVCodecContext *avctx)
         avctx->channel_layout = channel_mask;
     else
         avctx->channel_layout = (avctx->channels == 2) ? AV_CH_LAYOUT_STEREO : AV_CH_LAYOUT_MONO;
-
-    avcodec_get_frame_defaults(&q->frame);
-    avctx->coded_frame = &q->frame;
 
 #ifdef DEBUG
     dump_cook_context(q);

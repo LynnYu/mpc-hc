@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -56,8 +56,6 @@ BOOL CPlayerStatusBar::Create(CWnd* pParentWnd)
     m_tooltip.SetDelayTime(TTDT_AUTOPOP, 2500);
     m_tooltip.SetDelayTime(TTDT_RESHOW, 0);
 
-    m_time.ModifyStyle(0, SS_NOTIFY);
-
     m_tooltip.AddTool(&m_time, IDS_TOOLTIP_REMAINING_TIME);
 
     return ret;
@@ -90,7 +88,7 @@ int CPlayerStatusBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
     m_status.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
                     r, this, IDC_PLAYERSTATUS);
 
-    m_time.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
+    m_time.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_OWNERDRAW | SS_NOTIFY,
                   r, this, IDC_PLAYERTIME);
 
     m_status.SetWindowPos(&m_time, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -215,7 +213,7 @@ void CPlayerStatusBar::SetStatusTimer(CString str)
 void CPlayerStatusBar::SetStatusTimer(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur, bool fHighPrecision, const GUID* pTimeFormat)
 {
     ASSERT(pTimeFormat);
-    ASSERT(rtNow <= rtDur);
+    ASSERT(rtNow >= 0 && (rtNow <= rtDur || rtDur <= 0));
 
     CString str;
     CString posstr, durstr, rstr;
@@ -234,23 +232,23 @@ void CPlayerStatusBar::SetStatusTimer(REFERENCE_TIME rtNow, REFERENCE_TIME rtDur
         }
 
         if (tcDur.bHours > 0 || (rtNow >= rtDur && tcNow.bHours > 0)) {
-            posstr.Format(_T("%02d:%02d:%02d"), tcNow.bHours, tcNow.bMinutes, tcNow.bSeconds);
-            rstr.Format(_T("%02d:%02d:%02d"), tcRt.bHours, tcRt.bMinutes, tcRt.bSeconds);
+            posstr.Format(_T("%02u:%02u:%02u"), tcNow.bHours, tcNow.bMinutes, tcNow.bSeconds);
+            rstr.Format(_T("%02u:%02u:%02u"), tcRt.bHours, tcRt.bMinutes, tcRt.bSeconds);
         } else {
-            posstr.Format(_T("%02d:%02d"), tcNow.bMinutes, tcNow.bSeconds);
-            rstr.Format(_T("%02d:%02d"), tcRt.bMinutes, tcRt.bSeconds);
+            posstr.Format(_T("%02u:%02u"), tcNow.bMinutes, tcNow.bSeconds);
+            rstr.Format(_T("%02u:%02u"), tcRt.bMinutes, tcRt.bSeconds);
         }
 
         if (tcDur.bHours > 0) {
-            durstr.Format(_T("%02d:%02d:%02d"), tcDur.bHours, tcDur.bMinutes, tcDur.bSeconds);
+            durstr.Format(_T("%02u:%02u:%02u"), tcDur.bHours, tcDur.bMinutes, tcDur.bSeconds);
         } else {
-            durstr.Format(_T("%02d:%02d"), tcDur.bMinutes, tcDur.bSeconds);
+            durstr.Format(_T("%02u:%02u"), tcDur.bMinutes, tcDur.bSeconds);
         }
 
         if (fHighPrecision) {
-            posstr.AppendFormat(_T(".%03d"), (rtNow / 10000) % 1000);
-            durstr.AppendFormat(_T(".%03d"), (rtDur / 10000) % 1000);
-            rstr.AppendFormat(_T(".%03d"), ((rtDur - rtNow) / 10000) % 1000);
+            posstr.AppendFormat(_T(".%03d"), int((rtNow / 10000) % 1000));
+            durstr.AppendFormat(_T(".%03d"), int((rtDur / 10000) % 1000));
+            rstr.AppendFormat(_T(".%03d"), int(((rtDur - rtNow) / 10000) % 1000));
         }
     } else if (*pTimeFormat == TIME_FORMAT_FRAME) {
         posstr.Format(_T("%I64d"), rtNow);
@@ -282,7 +280,6 @@ BEGIN_MESSAGE_MAP(CPlayerStatusBar, CDialogBar)
     ON_WM_LBUTTONDOWN()
     ON_WM_SETCURSOR()
     ON_WM_CTLCOLOR()
-    ON_STN_CLICKED(IDC_PLAYERTIME, OnTimeDisplayClicked)
 END_MESSAGE_MAP()
 
 
@@ -342,7 +339,7 @@ void CPlayerStatusBar::OnPaint()
     if (m_hIcon) {
         GetClientRect(&r);
         r.SetRect(6, r.top+4, 22-1, r.bottom-4-1);
-        DrawIconEx(dc, r.left, r.top, m_hIcon, r.Width(), r.Height(), 0, NULL, DI_NORMAL|DI_COMPAT);
+        DrawIconEx(dc, r.left, r.top, m_hIcon, r.Width(), r.Height(), 0, nullptr, DI_NORMAL|DI_COMPAT);
     }
     */
     // Do not call CDialogBar::OnPaint() for painting messages
@@ -363,7 +360,9 @@ void CPlayerStatusBar::OnLButtonDown(UINT nFlags, CPoint point)
     wp.length = sizeof(wp);
     pFrame->GetWindowPlacement(&wp);
 
-    if (!pFrame->m_fFullScreen && wp.showCmd != SW_SHOWMAXIMIZED) {
+    if (m_time_rect.PtInRect(point)) {
+        OnTimeDisplayClicked();
+    } else if (!pFrame->m_fFullScreen && wp.showCmd != SW_SHOWMAXIMIZED) {
         CRect r;
         GetClientRect(r);
         CPoint p = point;
@@ -390,7 +389,7 @@ BOOL CPlayerStatusBar::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message)
     ScreenToClient(&p);
 
     if (m_time_rect.PtInRect(p)) {
-        SetCursor(LoadCursor(NULL, IDC_HAND));
+        SetCursor(LoadCursor(nullptr, IDC_HAND));
         return TRUE;
     }
 
@@ -398,7 +397,7 @@ BOOL CPlayerStatusBar::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message)
         CRect r;
         GetClientRect(r);
         if (p.x >= r.Width() - r.Height() && !pFrame->IsCaptionHidden()) {
-            SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+            SetCursor(LoadCursor(nullptr, IDC_SIZENWSE));
             return TRUE;
         }
     }
@@ -428,8 +427,9 @@ BOOL CPlayerStatusBar::PreTranslateMessage(MSG* pMsg)
 void CPlayerStatusBar::OnTimeDisplayClicked()
 {
     CMainFrame* pFrame = ((CMainFrame*)GetParentFrame());
+    CAppSettings& s = AfxGetAppSettings();
 
-    AfxGetAppSettings().fRemainingTime = !AfxGetAppSettings().fRemainingTime;
+    s.fRemainingTime = !s.fRemainingTime;
     // This isn't particularly nice...
     pFrame->OnTimer(2);
 }

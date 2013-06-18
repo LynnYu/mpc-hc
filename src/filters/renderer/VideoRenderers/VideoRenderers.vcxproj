@@ -22,8 +22,10 @@
     <ProjectGuid>{FB565A7A-50DC-4A0D-852D-5E7F74DAB82C}</ProjectGuid>
     <RootNamespace>VideoRenderers</RootNamespace>
     <Keyword>MFCProj</Keyword>
+    <ProjectName>VideoRenderers</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\..\..\platform.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseOfMfc>Static</UseOfMfc>
@@ -162,12 +164,6 @@
     <ClInclude Include="SyncRenderer.h" />
     <ClInclude Include="VMR7AllocatorPresenter.h" />
     <ClInclude Include="VMR9AllocatorPresenter.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\DSUtil\DSUtil.vcxproj">
-      <Project>{fc70988b-1ae5-4381-866d-4f405e28ac42}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,5 +1,5 @@
 /*
- * (C) 2012 see Authors.txt
+ * (C) 2012-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -29,19 +29,19 @@ protected:
     double* m_matrix_dbl;
 
     enum AVSampleFormat m_in_avsf;
-    enum AVSampleFormat m_in_avsf_used;
     DWORD   m_in_layout;
     DWORD   m_out_layout;
+    float   m_matrix_norm;
     int     m_in_samplerate;
     int     m_out_samplerate;
 
-    void Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int in_samplerate = 48000, int out_samplerate = 48000);
+    void Init(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, float matrix_norm = 0.0f, int in_samplerate = 48000, int out_samplerate = 48000);
 
 public:
     CMixer();
     ~CMixer();
 
-    void Update(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, int in_samplerate = 48000, int out_samplerate = 48000);
+    void Update(AVSampleFormat in_avsf, DWORD in_layout, DWORD out_layout, float matrix_norm = 0.0f, int in_samplerate = 48000, int out_samplerate = 48000);
     int  Mixing(float* pOutput, int out_samples, BYTE* pInput, int in_samples);
 
     int  CalcOutSamples(int in_samples); // needed when using resampling

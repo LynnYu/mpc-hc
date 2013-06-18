@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -57,7 +57,7 @@ public:
     void Start(CWnd* pWnd, IMadVRTextOsd* pMVTO);
     void Stop();
 
-    void DisplayMessage(OSD_MESSAGEPOS nPos, LPCTSTR strMsg, int nDuration = 5000, int FontSize = 0, CString OSD_Font = _T(""));
+    void DisplayMessage(OSD_MESSAGEPOS nPos, LPCTSTR strMsg, int nDuration = 5000, int iFontSize = 0, CString fontName = _T(""));
     void DebugMessage(LPCTSTR format, ...);
     void ClearMessage(bool hide = false);
     void HideMessage(bool hide);
@@ -68,7 +68,7 @@ public:
     void SetRange(__int64 start,  __int64 stop);
     void GetRange(__int64& start, __int64& stop);
 
-    void OnSize(UINT nType, int cx, int cy);
+    void SetSize(CRect wndRect, CRect videoRect);
     bool OnMouseMove(UINT nFlags, CPoint point);
     bool OnLButtonDown(UINT nFlags, CPoint point);
     bool OnLButtonUp(UINT nFlags, CPoint point);
@@ -80,26 +80,26 @@ private:
 
     CWnd* m_pWnd;
 
-    CCritSec           m_Lock;
-    CDC                m_MemDC;
+    CCritSec           m_csLock;
+    CDC                m_memDC;
     VMR9AlphaBitmap    m_VMR9AlphaBitmap;
     MFVideoAlphaBitmap m_MFVideoAlphaBitmap;
-    BITMAP             m_BitmapInfo;
+    BITMAP             m_bitmapInfo;
 
-    CFont   m_MainFont;
+    CFont   m_mainFont;
     CPen    m_penBorder;
     CPen    m_penCursor;
     CBrush  m_brushBack;
     CBrush  m_brushBar;
     CPen    m_debugPenBorder;
     CBrush  m_debugBrushBack;
-    int     m_FontSize;
-    CString m_OSD_Font;
+    int     m_iFontSize;
+    CString m_fontName;
 
     CRect    m_rectWnd;
-    COLORREF m_Color[OSD_LAST];
+    COLORREF m_colors[OSD_LAST];
 
-    // Curseur de calage
+    // Seekbar
     CRect   m_rectSeekBar;
     CRect   m_rectCursor;
     CRect   m_rectBar;
@@ -118,7 +118,6 @@ private:
     CList<CString> m_debugMessages;
 
     void UpdateBitmap();
-    void CalcRect();
     void UpdateSeekBarPos(CPoint point);
     void DrawSlider(CRect* rect, __int64 llMin, __int64 llMax, __int64 llPos);
     void DrawRect(CRect* rect, CBrush* pBrush = NULL, CPen* pPen = NULL);
@@ -127,5 +126,4 @@ private:
     void DrawDebug();
 
     static void CALLBACK TimerFunc(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTime);
-
 };

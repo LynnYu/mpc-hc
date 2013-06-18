@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2007-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -91,7 +91,7 @@ HRESULT CDXVADecoderVC1::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME r
     }
 
     // Wait I frame after a flush
-    if (m_bFlushed && ! m_PictureParams.bPicIntra) {
+    if (m_bFlushed && !m_PictureParams.bPicIntra) {
         return S_FALSE;
     }
 
@@ -124,7 +124,7 @@ HRESULT CDXVADecoderVC1::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME r
 
     m_PictureParams.bPicScanMethod++;       // Use for status reporting sections 3.8.1 and 3.8.2
 
-    TRACE_VC1("CDXVADecoderVC1::DecodeFrame() : Decode frame %i\n", m_PictureParams.bPicScanMethod);
+    TRACE_VC1("CDXVADecoderVC1::DecodeFrame() : Decode frame %d\n", m_PictureParams.bPicScanMethod);
 
     // Send picture params to accelerator
     CHECK_HR_TRACE(AddExecuteBuffer(DXVA2_PictureParametersBufferType, sizeof(m_PictureParams), &m_PictureParams));
@@ -142,7 +142,7 @@ HRESULT CDXVADecoderVC1::DecodeFrame(BYTE* pDataIn, UINT nSize, REFERENCE_TIME r
 
     // ***************
     if (nFrameSize) { // Decoding Second Field
-        FFVC1UpdatePictureParam(&m_PictureParams, m_pFilter->GetAVCtx(), NULL, NULL, pDataIn, nSize, NULL, TRUE, &m_bFrame_repeat_pict);
+        FFVC1UpdatePictureParam(&m_PictureParams, m_pFilter->GetAVCtx(), nullptr, nullptr, pDataIn, nSize, nullptr, TRUE, &m_bFrame_repeat_pict);
 
         CHECK_HR_TRACE(BeginFrame(nSurfaceIndex, pSampleToDeliver));
 
@@ -250,7 +250,7 @@ BYTE* CDXVADecoderVC1::FindNextStartCode(BYTE* pBuffer, UINT nSize, UINT& nPacke
 
     ASSERT(FALSE);      // Should never happen!
 
-    return NULL;
+    return nullptr;
 }
 
 void CDXVADecoderVC1::CopyBitstream(BYTE* pDXVABuffer, BYTE* pBuffer, UINT& nSize)

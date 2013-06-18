@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -26,6 +26,7 @@
 #ifdef STANDALONE_FILTER
 #include <InitGuid.h>
 #endif
+#include <MMReg.h>
 #include "moreuuids.h"
 
 #define FLV_AUDIODATA     8
@@ -63,8 +64,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-    {L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, NULL, _countof(sudPinTypesIn), sudPinTypesIn},
-    {L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, NULL, 0, NULL}
+    {L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, _countof(sudPinTypesIn), sudPinTypesIn},
+    {L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesOut2[] = {
@@ -73,12 +74,12 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut2[] = {
 
 const AMOVIESETUP_FILTER sudFilter[] = {
     {&__uuidof(CFLVSplitterFilter), FlvSplitterName, MERIT_NORMAL, _countof(sudpPins), sudpPins, CLSID_LegacyAmFilterCategory},
-    {&__uuidof(CFLVSourceFilter), FlvSourceName, MERIT_NORMAL, 0, NULL, CLSID_LegacyAmFilterCategory},
+    {&__uuidof(CFLVSourceFilter), FlvSourceName, MERIT_NORMAL, 0, nullptr, CLSID_LegacyAmFilterCategory},
 };
 
 CFactoryTemplate g_Templates[] = {
-    {sudFilter[0].strName, sudFilter[0].clsID, CreateInstance<CFLVSplitterFilter>, NULL, &sudFilter[0]},
-    {sudFilter[1].strName, sudFilter[1].clsID, CreateInstance<CFLVSourceFilter>, NULL, &sudFilter[1]},
+    {sudFilter[0].strName, sudFilter[0].clsID, CreateInstance<CFLVSplitterFilter>, nullptr, &sudFilter[0]},
+    {sudFilter[1].strName, sudFilter[1].clsID, CreateInstance<CFLVSourceFilter>, nullptr, &sudFilter[1]},
 };
 
 int g_cTemplates = _countof(g_Templates);
@@ -87,7 +88,7 @@ STDAPI DllRegisterServer()
 {
     DeleteRegKey(_T("Media Type\\Extensions\\"), _T(".flv"));
 
-    RegisterSourceFilter(CLSID_AsyncReader, MEDIASUBTYPE_FLV, _T("0,4,,464C5601"), NULL);
+    RegisterSourceFilter(CLSID_AsyncReader, MEDIASUBTYPE_FLV, _T("0,4,,464C5601"), nullptr);
 
     return AMovieDllRegisterServer2(TRUE);
 }
@@ -325,7 +326,7 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
                         name += L" ADPCM";
                         break;
                     case FLV_AUDIO_MP3:
-                        mt.subtype = FOURCCMap(wfe->wFormatTag = WAVE_FORMAT_MP3);
+                        mt.subtype = FOURCCMap(wfe->wFormatTag = WAVE_FORMAT_MPEGLAYER3);
                         name += L" MP3";
 
                         {
@@ -355,15 +356,8 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
                             fTypeFlagsAudio = true;
                             break;
                         }
+                        mt.subtype = FOURCCMap(wfe->wFormatTag = WAVE_FORMAT_AAC);
                         name += L" AAC";
-
-                        const int sampleRates[] = {
-                            96000, 88200, 64000, 48000, 44100, 32000, 24000,
-                            22050, 16000, 12000, 11025, 8000, 7350
-                        };
-                        const int channels[] = {
-                            0, 1, 2, 3, 4, 5, 6, 8
-                        };
 
                         __int64 configOffset = m_pFile->GetPos();
                         UINT32 configSize = dataSize - 1;
@@ -379,6 +373,14 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
                             break;
                         }
 
+                        const int sampleRates[] = {
+                            96000, 88200, 64000, 48000, 44100, 32000, 24000,
+                            22050, 16000, 12000, 11025, 8000, 7350
+                        };
+                        const int channels[] = {
+                            0, 1, 2, 3, 4, 5, 6, 8
+                        };
+
                         wfe = (WAVEFORMATEX*)mt.AllocFormatBuffer(sizeof(WAVEFORMATEX) + configSize);
                         memset(wfe, 0, mt.FormatLength());
                         wfe->nSamplesPerSec = sampleRates[iSampleRate];
@@ -388,8 +390,6 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
                         m_pFile->Seek(configOffset);
                         m_pFile->ByteRead((BYTE*)(wfe + 1), configSize);
-
-                        mt.subtype = FOURCCMap(wfe->wFormatTag = WAVE_FORMAT_AAC);
                     }
 
                 }
@@ -556,12 +556,15 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
                             m_pFile->UExpGolombRead(); // bit_depth_luma_minus8
                             m_pFile->UExpGolombRead(); // bit_depth_chroma_minus8
                             m_pFile->BitRead(1); // qpprime_y_zero_transform_bypass_flag
-                            if (m_pFile->BitRead(1)) // seq_scaling_matrix_present_flag
-                                for (int k = 0; k < 8; k++)
-                                    if (m_pFile->BitRead(1)) // seq_scaling_list_present_flag
+                            if (m_pFile->BitRead(1)) { // seq_scaling_matrix_present_flag
+                                for (int k = 0; k < 8; k++) {
+                                    if (m_pFile->BitRead(1)) { // seq_scaling_list_present_flag
                                         for (int j = 0, size = (k < 6) ? 16 : 64, next = 8; j < size && next != 0; ++j) {
                                             next = (next + m_pFile->SExpGolombRead() + 256) & 255;
                                         }
+                                    }
+                                }
+                            }
                         }
                         m_pFile->UExpGolombRead(); // log2_max_frame_num_minus4
                         UINT64 pic_order_cnt_type = m_pFile->UExpGolombRead();
@@ -637,9 +640,10 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
                             sar.den = 1;
                         }
                         CSize aspect(Width * sar.num, Height * sar.den);
-                        int lnko = LNKO(aspect.cx, aspect.cy);
-                        if (lnko > 1) {
-                            aspect.cx /= lnko, aspect.cy /= lnko;
+                        int gcd = GCD(aspect.cx, aspect.cy);
+                        if (gcd > 1) {
+                            aspect.cx /= gcd;
+                            aspect.cy /= gcd;
                         }
 
                         vih->hdr.dwPictAspectRatioX = aspect.cx;
@@ -729,7 +733,7 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
     m_rtNewStop = m_rtStop = m_rtDuration;
 
-    return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+    return !m_pOutputs.IsEmpty() ? S_OK : E_FAIL;
 }
 
 bool CFLVSplitterFilter::DemuxInit()
@@ -856,7 +860,7 @@ bool CFLVSplitterFilter::DemuxLoop()
     AudioTag at = {};
     VideoTag vt = {};
 
-    while (SUCCEEDED(hr) && !CheckRequest(NULL) && m_pFile->GetRemaining()) {
+    while (SUCCEEDED(hr) && !CheckRequest(nullptr) && m_pFile->GetRemaining()) {
         if (!ReadTag(t)) {
             break;
         }

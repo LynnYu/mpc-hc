@@ -1,21 +1,8 @@
-// File_Aac - Info for AAC (Raw) files
-// Copyright (C) 2008-2012 MediaArea.net SARL, Info@MediaArea.net
-//
-// This library is free software: you can redistribute it and/or modify it
-// under the terms of the GNU Library General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// any later version.
-//
-// This library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Library General Public License for more details.
-//
-// You should have received a copy of the GNU Library General Public License
-// along with this library. If not, see <http://www.gnu.org/licenses/>.
-//
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+/*  Copyright (c) MediaArea.net SARL. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license that can
+ *  be found in the License.html file in the root of the source tree.
+ */
 
 //---------------------------------------------------------------------------
 // Pre-compilation
@@ -373,7 +360,14 @@ void File_Aac::raw_data_block()
 
     if (sampling_frequency)
     {
-        FrameInfo.DTS+=float64_int64s(((float64)frame_length)*1000000000/sampling_frequency);
+        #if MEDIAINFO_TRACE
+            if (FrameInfo.PTS!=(int64u)-1)
+                Element_Info1(__T("PTS ")+Ztring().Duration_From_Milliseconds(float64_int64s(((float64)FrameInfo.PTS)/1000000)));
+            if (FrameInfo.DTS!=(int64u)-1)
+                Element_Info1(__T("DTS ")+Ztring().Duration_From_Milliseconds(float64_int64s(((float64)FrameInfo.DTS)/1000000)));
+        #endif //MEDIAINFO_TRACE
+        FrameInfo.DUR=float64_int64s(((float64)frame_length)*1000000000/sampling_frequency);
+        FrameInfo.DTS+=FrameInfo.DUR;
         FrameInfo.PTS=FrameInfo.DTS;
     }
 }
@@ -795,6 +789,14 @@ void File_Aac::section_data()
                 sfb_cb[g][sfb]=sect_cb[g][i];
             k+= sect_len;
             i++;
+            if (i>64)
+            {
+                Trusted_IsNot("Increment is wrong");
+                if (num_window_groups>1)
+                    Element_End0();
+                Element_End0();
+                return; //Error
+            }
         }
         num_sec[g]=i;
         if (num_window_groups>1)

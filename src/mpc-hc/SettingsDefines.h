@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2009-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -22,6 +22,13 @@
 
 #define IDS_R_SETTINGS                      _T("Settings")
 #define IDS_R_FILTERS                       _T("Filters")
+#define IDS_R_EXTERNAL_FILTERS_x86          _T("Filters\\x86")
+#define IDS_R_EXTERNAL_FILTERS_x64          _T("Filters\\x64")
+#ifndef _WIN64
+#define IDS_R_EXTERNAL_FILTERS              IDS_R_EXTERNAL_FILTERS_x86
+#else
+#define IDS_R_EXTERNAL_FILTERS              IDS_R_EXTERNAL_FILTERS_x64
+#endif
 #define IDS_R_INTERNAL_FILTERS              _T("Internal Filters")
 #define IDS_R_FAVFILES                      _T("Favorites\\Files")
 #define IDS_R_FAVDVDS                       _T("Favorites\\DVDs")
@@ -49,21 +56,26 @@
 #define IDS_RS_LOOPNUM                      _T("LoopNum")
 #define IDS_RS_SNAPTODESKTOPEDGES           _T("SnapToDesktopEdges")
 #define IDS_RS_ENABLESUBTITLES              _T("EnableSubtitles")
+#define IDS_RS_PREFER_FORCED_DEFAULT_SUBTITLES _T("PreferForcedDefaultSubtitles")
 #define IDS_RS_PRIORITIZEEXTERNALSUBTITLES  _T("PrioritizeExternalSubtitles")
 #define IDS_RS_DISABLEINTERNALSUBTITLES     _T("DisableInternalSubtitles")
+#define IDS_RS_ALLOW_OVERRIDING_EXT_SPLITTER _T("AllowOverridingExternalSplitterSubtitleChoice")
 #define IDS_RS_SUBTITLEPATHS                _T("SubtitlePaths")
 #define IDS_RS_USEDEFAULTSUBTITLESSTYLE     _T("UseDefaultsubtitlesStyle")
 #define IDS_RS_MPEGINTERLACED               _T("MPEGInterlaced")
 #define IDS_RS_THUMBWIDTH                   _T("ThumbWidth")
 #define IDS_RS_D3DFULLSCREEN                _T("D3DFullScreen")
 #define IDS_RS_MONITOR_AUTOREFRESHRATE      _T("MonitorAutoRefreshRate")
+#define IDS_RS_SPEEDSTEP                    _T("SpeedStep")
 // Audio
 #define IDS_RS_VOLUME                       _T("Volume")
 #define IDS_RS_MUTE                         _T("Mute")
 #define IDS_RS_BALANCE                      _T("Balance")
+#define IDS_RS_VOLUMESTEP                   _T("VolumeStep")
 // AudioSwitcher
 #define IDS_RS_ENABLEAUDIOSWITCHER          _T("EnableAudioSwitcher")
 #define IDS_RS_AUDIONORMALIZE               _T("AudioNormalize")
+#define IDS_RS_AUDIOMAXNORMFACTOR           _T("AudioMaxNormFactor")
 #define IDS_RS_AUDIONORMALIZERECOVER        _T("AudioNormalizeRecover")
 #define IDS_RS_AUDIOBOOST                   _T("AudioBoost")
 #define IDS_RS_DOWNSAMPLETO441              _T("DownSampleTo441")
@@ -94,6 +106,7 @@
 #define IDS_RS_MULTIINST                    _T("AllowMultipleInstances")
 #define IDS_RS_ALWAYSONTOP                  _T("AlwaysOnTop")
 #define IDS_RS_AUTOZOOM                     _T("AutoZoom")
+#define IDS_RS_AUTOFITFACTOR                _T("AutoFitFactor")
 #define IDS_RS_FULLSCREENCTRLS              _T("FullScreenCtrls")
 #define IDS_RS_FULLSCREENCTRLSTIMEOUT       _T("FullScreenCtrlsTimeOut")
 #define IDS_RS_VMRFLIP                      _T("VMRFlip")
@@ -193,7 +206,6 @@
 #define IDS_RS_WEBSERVERCGI                 _T("WebServerCGI")
 #define IDS_RS_WEBDEFINDEX                  _T("WebDefIndex")
 #define IDS_RS_LIMITWINDOWPROPORTIONS       _T("LimitWindowProportions")
-#define IDS_RS_NOTIFYMSN                    _T("NotifyMSN2")
 #define IDS_RS_LASTUSEDPAGE                 _T("LastUsedPage")
 #define IDS_RS_VMR9MIXERMODE                _T("VMR9MixerMode")
 #define IDS_RS_THUMBROWS                    _T("ThumbRows")
@@ -218,12 +230,12 @@
 #define IDS_RS_TOGGLESHADERSSCREENSPACE     _T("ToggleShaderScreenSpace")
 
 #define IDS_RS_DEFAULT_CAPTURE              _T("DefaultCapture")
-#define IDS_RS_CAPTURE                      _T("Capture")
+#define IDS_R_CAPTURE                       _T("Capture")
 #define IDS_RS_VIDEO_DISP_NAME              _T("VidDispName")
 #define IDS_RS_AUDIO_DISP_NAME              _T("AudDispName")
 #define IDS_RS_COUNTRY                      _T("Country")
 
-#define IDS_RS_DVB                          _T("DVB configuration")
+#define IDS_R_DVB                           _T("DVB configuration")
 #define IDS_RS_BDA_NETWORKPROVIDER          _T("BDANetworkProvider")
 #define IDS_RS_BDA_TUNER                    _T("BDATuner")
 #define IDS_RS_BDA_RECEIVER                 _T("BDAReceiver")
@@ -235,25 +247,29 @@
 #define IDS_RS_BDA_OFFSET                   _T("BDAOffset")
 #define IDS_RS_BDA_IGNORE_ENCRYPTED_CHANNELS _T("BDAIgnoreEncryptedChannels")
 #define IDS_RS_DVB_LAST_CHANNEL             _T("LastChannel")
+#define IDS_RS_DVB_REBUILD_FG               _T("RebuildFilterGraph")
+#define IDS_RS_DVB_STOP_FG                  _T("StopFilterGraph")
 
-#define IDS_D3D9RENDERDEVICE                _T("D3D9RenderDevice")
+#define IDS_RS_D3D9RENDERDEVICE             _T("D3D9RenderDevice")
 
-#define IDS_FASTSEEK_KEYFRAME               _T("FastSeek")
-#define IDS_SHOW_CHAPTERS                   _T("ShowChapters")
+#define IDS_RS_FASTSEEK_KEYFRAME            _T("FastSeek")
+#define IDS_RS_SHOW_CHAPTERS                _T("ShowChapters")
 
-#define IDS_LCD_SUPPORT                     _T("LcdSupport")
+#define IDS_RS_LCD_SUPPORT                  _T("LcdSupport")
 
-#define IDS_REMAINING_TIME                  _T("RemainingTime")
+#define IDS_RS_REMAINING_TIME               _T("RemainingTime")
 
 #define IDS_RS_UPDATER_AUTO_CHECK           _T("UpdaterAutoCheck")
 #define IDS_RS_UPDATER_LAST_CHECK           _T("UpdaterLastCheck")
 #define IDS_RS_UPDATER_DELAY                _T("UpdaterDelay")
 #define IDS_RS_UPDATER_IGNORE_VERSION       _T("UpdaterIgnoreVersion")
 
+#define IDS_RS_NOTIFY_SKYPE                 _T("NotifySkype")
+
 #define IDS_RS_GOTO_LAST_USED               _T("gotoluf")
 #define IDS_RS_GOTO_FPS                     _T("fps")
 
-#define IDS_R_SHADERS_INITIALIZED           _T("Initialized")
+#define IDS_RS_SHADERS_INITIALIZED          _T("Initialized")
 
 #define IDS_R_DLG_SUBTITLEDL                _T("Dialogs\\SubtitleDl")
 #define IDS_RS_DLG_SUBTITLEDL_COLWIDTH      _T("ColWidth")

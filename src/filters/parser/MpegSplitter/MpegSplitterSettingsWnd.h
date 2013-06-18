@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -22,6 +22,7 @@
 
 #include "../../InternalPropertyPage.h"
 #include "IMpegSplitterFilter.h"
+#include "resource.h"
 #include <afxcmn.h>
 
 class __declspec(uuid("44FCB62D-3AEB-401C-A7E1-8A984C017923"))
@@ -32,7 +33,6 @@ private:
 
     CButton     m_cbFastStreamChange;
     CButton     m_cbForcedSub;
-    CButton     m_cbTrackPriority;
     CButton     m_cbAlternativeDuration;
     CStatic     m_txtAudioLanguageOrder;
     CEdit       m_edtAudioLanguageOrder;
@@ -49,7 +49,6 @@ private:
     enum {
         IDC_PP_FAST_STREAM_SELECT = 10000,
         IDC_PP_SUBTITLE_FORCED,
-        IDC_PP_TRACK_PRIORITY,
         IDC_PP_AUDIO_LANGUAGE_ORDER,
         IDC_PP_SUBTITLES_LANGUAGE_ORDER,
         IDC_PP_VC1_GUIDFLAG,
@@ -68,8 +67,8 @@ public:
     void OnDeactivate();
     bool OnApply();
 
-    static LPCTSTR GetWindowTitle() { return _T("Settings"); }
-    static CSize GetWindowSize() { return CSize(320, 280); }
+    static LPCTSTR GetWindowTitle() { return MAKEINTRESOURCE(IDS_FILTER_SETTINGS_CAPTION); }
+    static CSize GetWindowSize() { return CSize(320, 260); }
 
     DECLARE_MESSAGE_MAP()
 };

@@ -57,6 +57,7 @@
 #endif
 
 #include "svq1.h"
+#include "svq3.h"
 
 /**
  * @file
@@ -139,7 +140,7 @@ static const uint32_t svq3_dequant_coeff[32] = {
     61694, 68745, 77615, 89113, 100253, 109366, 126635, 141533
 };
 
-void ff_svq3_luma_dc_dequant_idct_c(DCTELEM *output, DCTELEM *input, int qp)
+void ff_svq3_luma_dc_dequant_idct_c(int16_t *output, int16_t *input, int qp)
 {
     const int qmul = svq3_dequant_coeff[qp];
 #define stride 16
@@ -174,7 +175,7 @@ void ff_svq3_luma_dc_dequant_idct_c(DCTELEM *output, DCTELEM *input, int qp)
 }
 #undef stride
 
-void ff_svq3_add_idct_c(uint8_t *dst, DCTELEM *block,
+void ff_svq3_add_idct_c(uint8_t *dst, int16_t *block,
                         int stride, int qp, int dc)
 {
     const int qmul = svq3_dequant_coeff[qp];
@@ -212,23 +213,24 @@ void ff_svq3_add_idct_c(uint8_t *dst, DCTELEM *block,
     }
 }
 
-static inline int svq3_decode_block(GetBitContext *gb, DCTELEM *block,
+static inline int svq3_decode_block(GetBitContext *gb, int16_t *block,
                                     int index, const int type)
 {
     static const uint8_t *const scan_patterns[4] =
     { luma_dc_zigzag_scan, zigzag_scan, svq3_scan, chroma_dc_scan };
 
-    int run, level, sign, vlc, limit;
+    int run, level, sign, limit;
+    unsigned vlc;
     const int intra           = 3 * type >> 2;
     const uint8_t *const scan = scan_patterns[type];
 
     for (limit = (16 >> intra); index < 16; index = limit, limit += 8) {
         for (; (vlc = svq3_get_ue_golomb(gb)) != 0; index++) {
-            if (vlc < 0)
+            if ((int32_t)vlc < 0)
                 return -1;
 
-            sign = (vlc & 0x1) - 1;
-            vlc  = vlc + 1 >> 1;
+            sign     = (vlc & 1) ? 0 : -1;
+            vlc      = vlc + 1 >> 1;
 
             if (type == 3) {
                 if (vlc < 3) {
@@ -296,9 +298,9 @@ static inline void svq3_mc_dir_part(MpegEncContext *s,
     src  = pic->f.data[0] + mx + my * s->linesize;
 
     if (emu) {
-        s->dsp.emulated_edge_mc(s->edge_emu_buffer, src, s->linesize,
-                                width + 1, height + 1,
-                                mx, my, s->h_edge_pos, s->v_edge_pos);
+        s->vdsp.emulated_edge_mc(s->edge_emu_buffer, src, s->linesize,
+                                 width + 1, height + 1,
+                                 mx, my, s->h_edge_pos, s->v_edge_pos);
         src = s->edge_emu_buffer;
     }
     if (thirdpel)
@@ -322,10 +324,10 @@ static inline void svq3_mc_dir_part(MpegEncContext *s,
             src  = pic->f.data[i] + mx + my * s->uvlinesize;
 
             if (emu) {
-                s->dsp.emulated_edge_mc(s->edge_emu_buffer, src, s->uvlinesize,
-                                        width + 1, height + 1,
-                                        mx, my, (s->h_edge_pos >> 1),
-                                        s->v_edge_pos >> 1);
+                s->vdsp.emulated_edge_mc(s->edge_emu_buffer, src, s->uvlinesize,
+                                         width + 1, height + 1,
+                                         mx, my, (s->h_edge_pos >> 1),
+                                         s->v_edge_pos >> 1);
                 src = s->edge_emu_buffer;
             }
             if (thirdpel)
@@ -755,6 +757,7 @@ static int svq3_decode_slice_header(AVCodecContext *avctx)
     MpegEncContext *s = &h->s;
     const int mb_xy   = h->mb_xy;
     int i, header;
+    unsigned slice_id;
 
     header = get_bits(&s->gb, 8);
 
@@ -789,12 +792,12 @@ static int svq3_decode_slice_header(AVCodecContext *avctx)
         skip_bits_long(&s->gb, 0);
     }
 
-    if ((i = svq3_get_ue_golomb(&s->gb)) >= 3U) {
-        av_log(h->s.avctx, AV_LOG_ERROR, "illegal slice type %d \n", i);
+    if ((slice_id = svq3_get_ue_golomb(&s->gb)) >= 3) {
+        av_log(h->s.avctx, AV_LOG_ERROR, "illegal slice type %d \n", slice_id);
         return -1;
     }
 
-    h->slice_type = golomb_to_pict_type[i];
+    h->slice_type = golomb_to_pict_type[slice_id];
 
     if ((header & 0x9F) == 2) {
         i              = (s->mb_num < 64) ? 6 : (1 + av_log2(s->mb_num - 1));
@@ -860,161 +863,158 @@ static av_cold int svq3_decode_init(AVCodecContext *avctx)
     h->sps.chroma_format_idc = 1;
     avctx->pix_fmt     = avctx->codec->pix_fmts[0];
 
-    if (!s->context_initialized) {
-        h->chroma_qp[0] = h->chroma_qp[1] = 4;
+    h->chroma_qp[0] = h->chroma_qp[1] = 4;
 
-        svq3->halfpel_flag  = 1;
-        svq3->thirdpel_flag = 1;
-        svq3->unknown_flag  = 0;
+    svq3->halfpel_flag  = 1;
+    svq3->thirdpel_flag = 1;
+    svq3->unknown_flag  = 0;
 
-
-        /* prowl for the "SEQH" marker in the extradata */
-        extradata     = (unsigned char *)avctx->extradata;
-        extradata_end = avctx->extradata + avctx->extradata_size;
-        if (extradata) {
-            for (m = 0; m + 8 < avctx->extradata_size; m++) {
-                if (!memcmp(extradata, "SEQH", 4)) {
-                    marker_found = 1;
-                    break;
-                }
-                extradata++;
+    /* prowl for the "SEQH" marker in the extradata */
+    extradata     = (unsigned char *)avctx->extradata;
+    extradata_end = avctx->extradata + avctx->extradata_size;
+    if (extradata) {
+        for (m = 0; m + 8 < avctx->extradata_size; m++) {
+            if (!memcmp(extradata, "SEQH", 4)) {
+                marker_found = 1;
+                break;
             }
+            extradata++;
+        }
+    }
+
+    /* if a match was found, parse the extra data */
+    if (marker_found) {
+        GetBitContext gb;
+        int frame_size_code;
+
+        size = AV_RB32(&extradata[4]);
+        if (size > extradata_end - extradata - 8)
+            return AVERROR_INVALIDDATA;
+        init_get_bits(&gb, extradata + 8, size * 8);
+
+        /* 'frame size code' and optional 'width, height' */
+        frame_size_code = get_bits(&gb, 3);
+        switch (frame_size_code) {
+        case 0:
+            avctx->width  = 160;
+            avctx->height = 120;
+            break;
+        case 1:
+            avctx->width  = 128;
+            avctx->height =  96;
+            break;
+        case 2:
+            avctx->width  = 176;
+            avctx->height = 144;
+            break;
+        case 3:
+            avctx->width  = 352;
+            avctx->height = 288;
+            break;
+        case 4:
+            avctx->width  = 704;
+            avctx->height = 576;
+            break;
+        case 5:
+            avctx->width  = 240;
+            avctx->height = 180;
+            break;
+        case 6:
+            avctx->width  = 320;
+            avctx->height = 240;
+            break;
+        case 7:
+            avctx->width  = get_bits(&gb, 12);
+            avctx->height = get_bits(&gb, 12);
+            break;
         }
 
-        /* if a match was found, parse the extra data */
-        if (marker_found) {
-            GetBitContext gb;
-            int frame_size_code;
+        svq3->halfpel_flag  = get_bits1(&gb);
+        svq3->thirdpel_flag = get_bits1(&gb);
 
-            size = AV_RB32(&extradata[4]);
-            if (size > extradata_end - extradata - 8)
-                return AVERROR_INVALIDDATA;
-            init_get_bits(&gb, extradata + 8, size * 8);
+        /* unknown fields */
+        skip_bits1(&gb);
+        skip_bits1(&gb);
+        skip_bits1(&gb);
+        skip_bits1(&gb);
 
-            /* 'frame size code' and optional 'width, height' */
-            frame_size_code = get_bits(&gb, 3);
-            switch (frame_size_code) {
-            case 0:
-                avctx->width  = 160;
-                avctx->height = 120;
-                break;
-            case 1:
-                avctx->width  = 128;
-                avctx->height =  96;
-                break;
-            case 2:
-                avctx->width  = 176;
-                avctx->height = 144;
-                break;
-            case 3:
-                avctx->width  = 352;
-                avctx->height = 288;
-                break;
-            case 4:
-                avctx->width  = 704;
-                avctx->height = 576;
-                break;
-            case 5:
-                avctx->width  = 240;
-                avctx->height = 180;
-                break;
-            case 6:
-                avctx->width  = 320;
-                avctx->height = 240;
-                break;
-            case 7:
-                avctx->width  = get_bits(&gb, 12);
-                avctx->height = get_bits(&gb, 12);
-                break;
-            }
+        s->low_delay = get_bits1(&gb);
 
-            svq3->halfpel_flag  = get_bits1(&gb);
-            svq3->thirdpel_flag = get_bits1(&gb);
+        /* unknown field */
+        skip_bits1(&gb);
 
-            /* unknown fields */
-            skip_bits1(&gb);
-            skip_bits1(&gb);
-            skip_bits1(&gb);
-            skip_bits1(&gb);
+        while (get_bits1(&gb))
+            skip_bits(&gb, 8);
 
-            s->low_delay = get_bits1(&gb);
-
-            /* unknown field */
-            skip_bits1(&gb);
-
-            while (get_bits1(&gb))
-                skip_bits(&gb, 8);
-
-            svq3->unknown_flag  = get_bits1(&gb);
-            avctx->has_b_frames = !s->low_delay;
-            if (svq3->unknown_flag) {
+        svq3->unknown_flag  = get_bits1(&gb);
+        avctx->has_b_frames = !s->low_delay;
+        if (svq3->unknown_flag) {
 #if CONFIG_ZLIB
-                unsigned watermark_width  = svq3_get_ue_golomb(&gb);
-                unsigned watermark_height = svq3_get_ue_golomb(&gb);
-                int u1                    = svq3_get_ue_golomb(&gb);
-                int u2                    = get_bits(&gb, 8);
-                int u3                    = get_bits(&gb, 2);
-                int u4                    = svq3_get_ue_golomb(&gb);
-                unsigned long buf_len     = watermark_width *
-                                            watermark_height * 4;
-                int offset                = get_bits_count(&gb) + 7 >> 3;
-                uint8_t *buf;
+            unsigned watermark_width  = svq3_get_ue_golomb(&gb);
+            unsigned watermark_height = svq3_get_ue_golomb(&gb);
+            int u1                    = svq3_get_ue_golomb(&gb);
+            int u2                    = get_bits(&gb, 8);
+            int u3                    = get_bits(&gb, 2);
+            int u4                    = svq3_get_ue_golomb(&gb);
+            unsigned long buf_len     = watermark_width *
+                                        watermark_height * 4;
+            int offset                = get_bits_count(&gb) + 7 >> 3;
+            uint8_t *buf;
 
-                if (watermark_height <= 0 || (uint64_t)watermark_width*4 > UINT_MAX/watermark_height)
-                    return -1;
-
-                buf = av_malloc(buf_len);
-                av_log(avctx, AV_LOG_DEBUG, "watermark size: %dx%d\n",
-                       watermark_width, watermark_height);
-                av_log(avctx, AV_LOG_DEBUG,
-                       "u1: %x u2: %x u3: %x compressed data size: %d offset: %d\n",
-                       u1, u2, u3, u4, offset);
-                if (uncompress(buf, &buf_len, extradata + 8 + offset,
-                               size - offset) != Z_OK) {
-                    av_log(avctx, AV_LOG_ERROR,
-                           "could not uncompress watermark logo\n");
-                    av_free(buf);
-                    return -1;
-                }
-                svq3->watermark_key = ff_svq1_packet_checksum(buf, buf_len, 0);
-                svq3->watermark_key = svq3->watermark_key << 16 |
-                                      svq3->watermark_key;
-                av_log(avctx, AV_LOG_DEBUG,
-                       "watermark key %#x\n", svq3->watermark_key);
-                av_free(buf);
-#else
-                av_log(avctx, AV_LOG_ERROR,
-                       "this svq3 file contains watermark which need zlib support compiled in\n");
+            if (watermark_height <= 0 || (uint64_t)watermark_width*4 > UINT_MAX/watermark_height)
                 return -1;
-#endif
+
+            buf = av_malloc(buf_len);
+            av_log(avctx, AV_LOG_DEBUG, "watermark size: %dx%d\n",
+                   watermark_width, watermark_height);
+            av_log(avctx, AV_LOG_DEBUG,
+                   "u1: %x u2: %x u3: %x compressed data size: %d offset: %d\n",
+                   u1, u2, u3, u4, offset);
+            if (uncompress(buf, &buf_len, extradata + 8 + offset,
+                           size - offset) != Z_OK) {
+                av_log(avctx, AV_LOG_ERROR,
+                       "could not uncompress watermark logo\n");
+                av_free(buf);
+                return -1;
             }
-        }
-
-        s->width  = avctx->width;
-        s->height = avctx->height;
-
-        if (ff_MPV_common_init(s) < 0)
+            svq3->watermark_key = ff_svq1_packet_checksum(buf, buf_len, 0);
+            svq3->watermark_key = svq3->watermark_key << 16 |
+                                  svq3->watermark_key;
+            av_log(avctx, AV_LOG_DEBUG,
+                   "watermark key %#x\n", svq3->watermark_key);
+            av_free(buf);
+#else
+            av_log(avctx, AV_LOG_ERROR,
+                   "this svq3 file contains watermark which need zlib support compiled in\n");
             return -1;
-
-        h->b_stride = 4 * s->mb_width;
-
-        if (ff_h264_alloc_tables(h) < 0) {
-            av_log(avctx, AV_LOG_ERROR, "svq3 memory allocation failed\n");
-            return AVERROR(ENOMEM);
+#endif
         }
+    }
+
+    s->width  = avctx->width;
+    s->height = avctx->height;
+
+    if (ff_MPV_common_init(s) < 0)
+        return -1;
+
+    h->b_stride = 4 * s->mb_width;
+
+    if (ff_h264_alloc_tables(h) < 0) {
+        av_log(avctx, AV_LOG_ERROR, "svq3 memory allocation failed\n");
+        return AVERROR(ENOMEM);
     }
 
     return 0;
 }
 
 static int svq3_decode_frame(AVCodecContext *avctx, void *data,
-                             int *data_size, AVPacket *avpkt)
+                             int *got_frame, AVPacket *avpkt)
 {
     SVQ3Context *svq3  = avctx->priv_data;
     H264Context *h     = &svq3->h;
     MpegEncContext *s  = &h->s;
     int buf_size       = avpkt->size;
-    int m, mb_type, left;
+    int m, left;
     uint8_t *buf;
 
     /* special case for last picture */
@@ -1022,7 +1022,7 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
         if (s->next_picture_ptr && !s->low_delay) {
             *(AVFrame *) data   = s->next_picture.f;
             s->next_picture_ptr = NULL;
-            *data_size          = sizeof(AVFrame);
+            *got_frame          = 1;
         }
         return 0;
     }
@@ -1109,6 +1109,7 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
 
     for (s->mb_y = 0; s->mb_y < s->mb_height; s->mb_y++) {
         for (s->mb_x = 0; s->mb_x < s->mb_width; s->mb_x++) {
+            unsigned mb_type;
             h->mb_xy = s->mb_x + s->mb_y * s->mb_stride;
 
             if ((get_bits_count(&s->gb) + 7) >= s->gb.size_in_bits &&
@@ -1129,7 +1130,7 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
                 mb_type += 8;
             else if (s->pict_type == AV_PICTURE_TYPE_B && mb_type >= 4)
                 mb_type += 4;
-            if ((unsigned)mb_type > 33 || svq3_decode_mb(svq3, mb_type)) {
+            if (mb_type > 33 || svq3_decode_mb(svq3, mb_type)) {
                 av_log(h->s.avctx, AV_LOG_ERROR,
                        "error while decoding MB %d %d\n", s->mb_x, s->mb_y);
                 return -1;
@@ -1167,7 +1168,7 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
 
     /* Do not output the last pic after seeking. */
     if (s->last_picture_ptr || s->low_delay)
-        *data_size = sizeof(AVFrame);
+        *got_frame = 1;
 
     return buf_size;
 }

@@ -22,22 +22,21 @@ Main Features:
 * Multi-Monitor support
 * Various pixel shaders
 * Color management
-* 24 translations available
+* 25 translations available
 
 
 System Requirements:
 ---------------------
 * An SSE capable CPU
-* Windows XP SP3, Vista, 7 32-bit/64-bit
+* Windows XP SP3, Vista, 7, 8 32-bit/64-bit
 
 
 Links:
 -------
-Website:            http://mpc-hc.sourceforge.net
+Website:            http://mpc-hc.org
 Source code:        https://github.com/mpc-hc
-Support Trac:       http://sourceforge.net/apps/trac/mpc-hc
+Support Trac:       https://trac.mpc-hc.org
 IRC Channel:        #mpc-hc / #mpc-hc-dev at Freenode (http://webchat.freenode.net/)
-Help and Support:   http://sourceforge.net/apps/trac/mpc-hc/
 Donations:          http://sourceforge.net/donate/index.php?group_id=170561
 
 
@@ -52,7 +51,7 @@ MPC-HC makes use of the following third-party code:
 Project             License                     Website
 --------------------------------------------------------------------
 ATL Server          Ms-LPL                      http://atlserver.codeplex.com/
-Bento4              GPLv2                       http://zebulon.bok.net/trac/Bento4
+Bento4              GPLv2                       http://www.bok.net/trac/bento4/
 CLineNumberEdit     -                           http://www.codeproject.com/Articles/6385/Controls-in-controls-A-line-numbering-edit-box
 CSizingControlBar   GPLv2                       http://www.datamekanix.com/sizecbar/
 Detours             MSR-SSLA                    http://research.microsoft.com/en-us/projects/detours/
@@ -62,9 +61,10 @@ libmpeg2            GPLv2                       http://libmpeg2.sourceforge.net/
 libogg              New BSD License             http://www.xiph.org/
 Little CMS          MIT License                 http://www.littlecms.com/
 Logitech SDK        -                           -
-MediaInfoLib        LGPLv2+                     http://mediainfo.sourceforge.net/
+MediaInfoLib        BSD                         http://mediainfo.sourceforge.net/
 MultiMon            CPOL                        http://www.codeproject.com/KB/GDI/multimon.aspx
 QuickTime SDK       -                           http://developer.apple.com/quicktime/
+RARFileSource       GPLv2+                      http://www.v12pwr.com/RARFileSource/
 RealMedia SDK       -                           -
 ResizableLib        Artistic License            http://sourceforge.net/projects/resizablelib/
 Silk Icons          CC Attribution 2.5          http://www.famfamfam.com/lab/icons/silk/

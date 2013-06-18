@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -34,7 +34,7 @@
 IMPLEMENT_DYNAMIC(CPlayerToolBar, CToolBar)
 CPlayerToolBar::CPlayerToolBar()
     : m_nButtonHeight(16)
-    , m_pButtonsImages(NULL)
+    , m_pButtonsImages(nullptr)
 {
 }
 
@@ -201,11 +201,10 @@ BEGIN_MESSAGE_MAP(CPlayerToolBar, CToolBar)
     ON_UPDATE_COMMAND_UI(ID_VOLUME_MUTE, OnUpdateVolumeMute)
     ON_COMMAND_EX(ID_VOLUME_UP, OnVolumeUp)
     ON_COMMAND_EX(ID_VOLUME_DOWN, OnVolumeDown)
-    ON_COMMAND_EX(ID_VOLUME_INC, OnVolumeIncrease)
-    ON_COMMAND_EX(ID_VOLUME_DEC, OnVolumeDecrease)
     ON_WM_NCPAINT()
     ON_WM_LBUTTONDOWN()
     ON_WM_MOUSEMOVE()
+    ON_NOTIFY_EX_RANGE(TTN_NEEDTEXTW, 0, 0xFFFFFFFF, OnToolTipNotify)
 END_MESSAGE_MAP()
 
 // CPlayerToolBar message handlers
@@ -286,18 +285,6 @@ BOOL CPlayerToolBar::OnVolumeDown(UINT nID)
     return FALSE;
 }
 
-BOOL CPlayerToolBar::OnVolumeIncrease(UINT nID)
-{
-    m_volctrl.SetPos(m_volctrl.GetPos() + 1);
-    return FALSE;
-}
-
-BOOL CPlayerToolBar::OnVolumeDecrease(UINT nID)
-{
-    m_volctrl.SetPos(m_volctrl.GetPos() - 1);
-    return FALSE;
-}
-
 void CPlayerToolBar::OnNcPaint() // when using XP styles the NC area isn't drawn for our toolbar...
 {
     CRect wr, cr;
@@ -362,4 +349,40 @@ int CPlayerToolBar::getHitButtonIdx(CPoint point)
     }
 
     return hit;
+}
+
+BOOL CPlayerToolBar::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
+{
+    TOOLTIPTEXT* pTTT = (TOOLTIPTEXT*)pNMHDR;
+
+    UINT_PTR nID = pNMHDR->idFrom;
+    if (pTTT->uFlags & TTF_IDISHWND) {
+        nID = ::GetDlgCtrlID((HWND)nID);
+    }
+
+    if (nID != ID_VOLUME_MUTE) {
+        return FALSE;
+    }
+
+    CToolBarCtrl& tb = GetToolBarCtrl();
+    TBBUTTONINFO bi;
+    bi.cbSize = sizeof(bi);
+    bi.dwMask = TBIF_IMAGE;
+    tb.GetButtonInfo(ID_VOLUME_MUTE, &bi);
+
+    static CString strTipText;
+    if (bi.iImage == 12) {
+        strTipText.LoadString(ID_VOLUME_MUTE);
+    } else if (bi.iImage == 13) {
+        strTipText.LoadString(ID_VOLUME_MUTE_ON);
+    } else if (bi.iImage == 14) {
+        strTipText.LoadString(ID_VOLUME_MUTE_DISABLED);
+    } else {
+        return FALSE;
+    }
+    pTTT->lpszText = (LPWSTR)(LPCWSTR)strTipText;
+
+    *pResult = 0;
+
+    return TRUE;    // message was handled
 }

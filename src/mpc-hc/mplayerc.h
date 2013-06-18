@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -33,7 +33,8 @@
 #include <d3d9.h>
 #include <vmr9.h>
 #include <dxva2api.h> //#include <evr9.h>
-
+#include <map>
+#include <afxmt.h>
 
 #define MPC_WND_CLASS_NAME L"MediaPlayerClassicW"
 
@@ -80,8 +81,8 @@ __inline DXVA2_Fixed32 IntToFixed(__in const int _int_, __in const short divisor
 {
     // special converter that is resistant to MS bugs
     DXVA2_Fixed32 _fixed_;
-    _fixed_.Value = _int_ / divisor;
-    _fixed_.Fraction = (_int_ % divisor * 0x10000 + divisor / 2) / divisor;
+    _fixed_.Value = SHORT(_int_ / divisor);
+    _fixed_.Fraction = USHORT((_int_ % divisor * 0x10000 + divisor / 2) / divisor);
     return _fixed_;
 }
 
@@ -107,6 +108,8 @@ struct LanguageResource {
 
 class CMPlayerCApp : public CWinApp
 {
+    HMODULE m_hNTDLL;
+
     ATL::CMutex m_mutexOneInstance;
 
     CAtlList<CString> m_cmdln;
@@ -123,6 +126,7 @@ class CMPlayerCApp : public CWinApp
 
 public:
     CMPlayerCApp();
+    ~CMPlayerCApp();
 
     void ShowCmdlnSwitches() const;
 
@@ -130,12 +134,31 @@ public:
     bool StoreSettingsToRegistry();
     CString GetIniPath() const;
     bool IsIniValid() const;
-    bool IsIniUTF16LE() const;
     bool ChangeSettingsLocation(bool useIni);
-    void ExportSettings();
+    bool ExportSettings(CString savePath, CString subKey = _T(""));
+
+private:
+    struct CStringIgnoreCaseLess {
+        bool operator()(const CString& str1, const CString& str2) const {
+            return str1.CompareNoCase(str2) < 0;
+        }
+    };
+    std::map<CString, std::map<CString, CString, CStringIgnoreCaseLess>, CStringIgnoreCaseLess> m_ProfileMap;
+    bool m_fProfileInitialized;
+    void InitProfile();
+    ::CCriticalSection m_ProfileCriticalSection;
+public:
+    void FlushProfile();
+    virtual BOOL GetProfileBinary(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPBYTE* ppData, UINT* pBytes);
+    virtual UINT GetProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nDefault);
+    virtual CString GetProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszDefault = NULL);
+    virtual BOOL WriteProfileBinary(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPBYTE pData, UINT nBytes);
+    virtual BOOL WriteProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nValue);
+    virtual BOOL WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszValue);
 
     bool GetAppSavePath(CString& path);
 
+    bool m_fClosingState;
     CRenderersData m_Renderers;
     CString     m_strVersion;
     CString     m_AudioRendererDisplayName_CL;
@@ -180,5 +203,5 @@ public:
     afx_msg void OnHelpShowcommandlineswitches();
 };
 
-#define AfxGetMyApp() static_cast<CMPlayerCApp*>(AfxGetApp())
 #define AfxGetAppSettings() static_cast<CMPlayerCApp*>(AfxGetApp())->m_s
+#define AfxGetMyApp()       static_cast<CMPlayerCApp*>(AfxGetApp())
