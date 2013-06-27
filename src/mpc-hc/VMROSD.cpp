@@ -61,7 +61,7 @@ CVMROSD::CVMROSD()
     m_debugBrushBack.CreateSolidBrush(m_colors[OSD_DEBUGCLR]);
     m_debugPenBorder.CreatePen(PS_SOLID, 1, m_colors[OSD_BORDER]);
 
-    memset(&m_bitmapInfo, 0, sizeof(m_bitmapInfo));
+    ZeroMemory(&m_bitmapInfo, sizeof(m_bitmapInfo));
 }
 
 CVMROSD::~CVMROSD()
@@ -70,7 +70,7 @@ CVMROSD::~CVMROSD()
     m_memDC.DeleteDC();
 }
 
-void CVMROSD::SetSize(CRect wndRect, CRect videoRect)
+void CVMROSD::SetSize(const CRect& wndRect, const CRect& videoRect)
 {
     if (m_pWnd && (m_pVMB || m_pMFVMB)) {
         if (m_bSeekBarVisible) {
@@ -97,11 +97,10 @@ void CVMROSD::SetSize(CRect wndRect, CRect videoRect)
 void CVMROSD::UpdateBitmap()
 {
     CAutoLock lock(&m_csLock);
-    CRect rc;
     CWindowDC dc(m_pWnd);
 
     m_memDC.DeleteDC();
-    memset(&m_bitmapInfo, 0, sizeof(m_bitmapInfo));
+    ZeroMemory(&m_bitmapInfo, sizeof(m_bitmapInfo));
 
     if (m_memDC.CreateCompatibleDC(&dc)) {
         BITMAPINFO bmi;
@@ -192,7 +191,19 @@ void CVMROSD::Stop()
     }
 }
 
-void CVMROSD::DrawRect(CRect* rect, CBrush* pBrush, CPen* pPen)
+void CVMROSD::SetVideoWindow(CWnd* pWnd)
+{
+    CAutoLock lock(&m_csLock);
+
+    if (m_pWnd) {
+        m_pWnd->KillTimer((UINT_PTR)this);
+    }
+    m_pWnd = pWnd;
+    m_pWnd->SetTimer((UINT_PTR)this, 1000, (TIMERPROC)TimerFunc);
+    UpdateBitmap();
+}
+
+void CVMROSD::DrawRect(const CRect* rect, CBrush* pBrush, CPen* pPen)
 {
     if (pPen) {
         m_memDC.SelectObject(pPen);
@@ -516,4 +527,9 @@ void CVMROSD::HideMessage(bool hide)
 void CVMROSD::EnableShowMessage(bool enabled)
 {
     m_bShowMessage = enabled;
+}
+
+void CVMROSD::EnableShowSeekBar(bool enabled)
+{
+    m_bShowSeekBar = enabled;
 }

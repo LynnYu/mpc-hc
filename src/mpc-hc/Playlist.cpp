@@ -128,7 +128,7 @@ CString CPlaylistItem::GetLabel(int i)
     return str;
 }
 
-bool FindFileInList(CAtlList<CString>& sl, CString fn)
+bool FindFileInList(const CAtlList<CString>& sl, CString fn)
 {
     bool fFound = false;
     POSITION pos = sl.GetHeadPosition();
@@ -162,7 +162,8 @@ void CPlaylistItem::AutoLoadFiles()
                 path.Replace('/', '\\');
                 path = path.Left(path.ReverseFind('\\') + 1);
 
-                WIN32_FIND_DATA fd = {0};
+                WIN32_FIND_DATA fd;
+                ZeroMemory(&fd, sizeof(WIN32_FIND_DATA));
                 HANDLE hFind = FindFirstFile(fn.Left(i) + _T("*.*"), &fd);
                 if (hFind != INVALID_HANDLE_VALUE) {
                     do {
@@ -340,7 +341,7 @@ void CPlaylist::Randomize()
         a[i].n = rand(), a[i].pos = pos;
     }
     qsort(a.GetData(), a.GetCount(), sizeof(plsort_t), compare);
-    CList<CPlaylistItem> pl;
+
     for (size_t i = 0; i < a.GetCount(); i++) {
         AddTail(GetAt(a[i].pos));
         __super::RemoveAt(a[i].pos);

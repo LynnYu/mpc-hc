@@ -68,8 +68,8 @@ public:
     friend LOGFONTA& operator <<= (LOGFONTA& lfa, STSStyle& s);
     friend LOGFONTW& operator <<= (LOGFONTW& lfw, STSStyle& s);
 
-    friend CString& operator <<= (CString& style, STSStyle& s);
-    friend STSStyle& operator <<= (STSStyle& s, CString& style);
+    friend CString& operator <<= (CString& style, const STSStyle& s);
+    friend STSStyle& operator <<= (STSStyle& s, const CString& style);
 };
 
 class CSTSStyleMap : public CAtlMap<CString, STSStyle*, CStringElementTraits<CString>>
@@ -166,7 +166,7 @@ public:
     bool Open(BYTE* data, int len, int CharSet, CString name);
     bool SaveAs(CString fn, exttype et, double fps = -1, int delay = 0, CTextFile::enc = CTextFile::DEFAULT_ENCODING);
 
-    void Add(CStringW str, bool fUnicode, int start, int end, CString style = _T("Default"), CString actor = _T(""), CString effect = _T(""), CRect marginRect = CRect(0, 0, 0, 0), int layer = 0, int readorder = -1);
+    void Add(CStringW str, bool fUnicode, int start, int end, CString style = _T("Default"), CString actor = _T(""), CString effect = _T(""), const CRect& marginRect = CRect(0, 0, 0, 0), int layer = 0, int readorder = -1);
     STSStyle* CreateDefaultStyle(int CharSet);
     void ChangeUnknownStylesToDefault();
     void AddStyle(CString name, STSStyle* style); // style will be stored and freed in Empty() later
@@ -184,9 +184,9 @@ public:
 
     int TranslateSegmentStart(int i, double fps);
     int TranslateSegmentEnd(int i, double fps);
-    const STSSegment* SearchSubs(int t, double fps, /*[out]*/ int* iSegment = NULL, int* nSegments = NULL);
+    const STSSegment* SearchSubs(int t, double fps, /*[out]*/ int* iSegment = nullptr, int* nSegments = nullptr);
     const STSSegment* GetSegment(int iSegment) {
-        return iSegment >= 0 && iSegment < (int)m_segments.GetCount() ? &m_segments[iSegment] : NULL;
+        return iSegment >= 0 && iSegment < (int)m_segments.GetCount() ? &m_segments[iSegment] : nullptr;
     }
 
     STSStyle* GetStyle(int i);

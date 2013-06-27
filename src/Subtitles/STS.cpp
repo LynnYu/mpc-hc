@@ -243,7 +243,8 @@ int CharSetLen = _countof(CharSetList);
 
 static DWORD CharSetToCodePage(DWORD dwCharSet)
 {
-    CHARSETINFO cs = {0};
+    CHARSETINFO cs;
+    ZeroMemory(&cs, sizeof(CHARSETINFO));
     ::TranslateCharsetInfo((DWORD*)dwCharSet, &cs, TCI_SRCCHARSET);
     return cs.ciACP;
 }
@@ -753,7 +754,7 @@ static CStringW MicroDVD2SSA(CStringW str, bool fUnicode, int CharSet)
     bool fRestore[8];
     int fRestoreLen = 8;
 
-    memset(fRestore, 0, sizeof(bool)*fRestoreLen);
+    ZeroMemory(fRestore, sizeof(bool)*fRestoreLen);
 
     for (int pos = 0, eol; pos < str.GetLength(); pos++) {
         if ((eol = FindChar(str, '|', pos, fUnicode, CharSet)) < 0) {
@@ -887,7 +888,7 @@ static CStringW MicroDVD2SSA(CStringW str, bool fUnicode, int CharSet)
             }
         }
 
-        memset(fRestore, 0, sizeof(bool)*fRestoreLen);
+        ZeroMemory(fRestore, sizeof(bool)*fRestoreLen);
 
         ret += L"\\N";
     }
@@ -1229,7 +1230,7 @@ double GetFloat(CStringW& buff, char sep = ',') //throw(...)
     return ret;
 }
 
-static bool LoadFont(CString& font)
+static bool LoadFont(const CString& font)
 {
     int len = font.GetLength();
 
@@ -1920,7 +1921,7 @@ void CSimpleTextSubtitle::Empty()
     RemoveAll();
 }
 
-void CSimpleTextSubtitle::Add(CStringW str, bool fUnicode, int start, int end, CString style, CString actor, CString effect, CRect marginRect, int layer, int readorder)
+void CSimpleTextSubtitle::Add(CStringW str, bool fUnicode, int start, int end, CString style, CString actor, CString effect, const CRect& marginRect, int layer, int readorder)
 {
     if (str.Trim().IsEmpty() || start > end) {
         return;
@@ -3004,7 +3005,7 @@ LOGFONTW& operator <<= (LOGFONTW& lfw, STSStyle& s)
     return lfw;
 }
 
-CString& operator <<= (CString& style, STSStyle& s)
+CString& operator <<= (CString& style, const STSStyle& s)
 {
     style.Format(_T("%d;%d;%d;%d;%d;%d;%f;%f;%f;%f;0x%06x;0x%06x;0x%06x;0x%06x;0x%02x;0x%02x;0x%02x;0x%02x;%d;%s;%f;%f;%f;%f;%d;%u;%u;%u;%d;%f;%f;%f;%f;%d"),
                  s.marginRect.left, s.marginRect.right, s.marginRect.top, s.marginRect.bottom,
@@ -3023,7 +3024,7 @@ CString& operator <<= (CString& style, STSStyle& s)
     return style;
 }
 
-STSStyle& operator <<= (STSStyle& s, CString& style)
+STSStyle& operator <<= (STSStyle& s, const CString& style)
 {
     s.SetDefault();
 
@@ -3091,9 +3092,7 @@ static bool OpenRealText(CTextFile* file, CSimpleTextSubtitle& ret, int CharSet)
 
     CRealTextParser::Subtitles crRealText = RealTextParser.GetParsedSubtitles();
 
-    for (std::map<std::pair<int, int>, std::wstring>::const_iterator i = crRealText.m_mapLines.begin();
-            i != crRealText.m_mapLines.end();
-            ++i) {
+    for (auto i = crRealText.m_mapLines.cbegin(); i != crRealText.m_mapLines.cend(); ++i) {
         ret.Add(
             SubRipper2SSA(i->second.c_str(), CharSet),
             file->IsUnicode(),

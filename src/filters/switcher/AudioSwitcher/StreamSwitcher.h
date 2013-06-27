@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -102,7 +102,7 @@ public:
 interface __declspec(uuid("DA395FA3-4A3E-4D85-805E-0BEFF53D4BCD"))
 IStreamSwitcherInputPin :
 public IUnknown {
-    STDMETHOD_(bool, IsActive)() = 0;
+    STDMETHOD_(bool, IsActive)() PURE;
 };
 
 class CStreamSwitcherInputPin : public CBaseInputPin, public IPinConnection, public IStreamSwitcherInputPin
@@ -248,7 +248,7 @@ public:
     // override these
     virtual HRESULT CheckMediaType(const CMediaType* pmt) = 0;
     virtual HRESULT Transform(IMediaSample* pIn, IMediaSample* pOut);
-    virtual CMediaType CreateNewOutputMediaType(CMediaType mt, long& cbBuffer);
+    virtual CMediaType CreateNewOutputMediaType(const CMediaType& mt, long& cbBuffer);
     virtual void OnNewOutputMediaType(const CMediaType& mtIn, const CMediaType& mtOut) {}
 
     // and maybe these

@@ -1,5 +1,6 @@
 /*
- * (C) 2012-2013 see Authors.txt
+ * (C) 2003-2006 Gabest
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -20,28 +21,24 @@
 
 #pragma once
 
-#include <atlcoll.h>
+#include "afxwin.h"
 
-class CPaddedArray : public CAtlArray<BYTE>
+class CFocusThread : public CWinThread
 {
+    DECLARE_DYNCREATE(CFocusThread)
+
+private:
+    HWND m_hWnd;
+    HANDLE m_hEvtInit;
+
 protected:
-    size_t m_padsize;
+    CFocusThread(void); // protected constructor used by dynamic creation
+    ~CFocusThread(void);
 
 public:
-    CPaddedArray(size_t padsize)
-        : m_padsize(padsize) {
-    }
+    virtual BOOL InitInstance();
+    virtual int ExitInstance();
 
-    size_t GetCount() {
-        size_t count = __super::GetCount();
-        return (count > m_padsize) ? count - m_padsize : 0;
-    }
-
-    bool SetCount(size_t nNewSize, int nGrowBy = - 1) {
-        if (__super::SetCount(nNewSize + m_padsize, nGrowBy)) {
-            ZeroMemory(GetData() + nNewSize, m_padsize);
-            return true;
-        }
-        return false;
-    }
+    HWND GetFocusWindow();
 };
+

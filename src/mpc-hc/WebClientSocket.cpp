@@ -228,7 +228,7 @@ void CWebClientSocket::HandleRequest()
     }
 }
 
-void CWebClientSocket::ParseHeader(char* headerEnd)
+void CWebClientSocket::ParseHeader(const char* headerEnd)
 {
     char* start = m_buff, *end;
 
@@ -590,7 +590,8 @@ bool CWebClientSocket::OnBrowser(CStringA& hdr, CStringA& body, CStringA& mime)
             "<td class=\"dirdate\">&nbsp;</td>\r\n";
         files += "</tr>\r\n";
 
-        WIN32_FIND_DATA fd = {0};
+        WIN32_FIND_DATA fd;
+        ZeroMemory(&fd, sizeof(WIN32_FIND_DATA));
 
         HANDLE hFind = FindFirstFile(path + "*.*", &fd);
         if (hFind != INVALID_HANDLE_VALUE) {

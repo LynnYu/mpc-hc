@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -137,11 +137,11 @@ namespace DSObjects
         void ComputeRegion();
         void SubtractSite(REGION* pRegion);
 
-        void UpdateZOrder(CRealMediaWindowlessSite* pUpdatedChildSite, INT32 lOldZOrder, INT32 lNewZOrder);
+        void UpdateZOrder(const CRealMediaWindowlessSite* pUpdatedChildSite, INT32 lOldZOrder, INT32 lNewZOrder);
         void SetInternalZOrder(INT32 lZOrder);
 
     public:
-        CRealMediaWindowlessSite(HRESULT& hr, IUnknown* pContext, CRealMediaWindowlessSite* pParentSite = NULL, IUnknown* pUnkOuter = NULL);
+        CRealMediaWindowlessSite(HRESULT& hr, IUnknown* pContext, CRealMediaWindowlessSite* pParentSite = nullptr, IUnknown* pUnkOuter = nullptr);
         virtual ~CRealMediaWindowlessSite();
 
         DECLARE_IUNKNOWN;
@@ -193,7 +193,7 @@ namespace DSObjects
         STDMETHODIMP SetCursor(PNxCursor cursor, REF(PNxCursor) oldCursor);
 
     private:
-        void IntersectRect(PNxRect* pRect, PNxRect* pBox, PNxRect* pRetVal);
+        void IntersectRect(const PNxRect* pRect, const PNxRect* pBox, PNxRect* pRetVal);
 
     protected:
         RMABitmapInfoHeader m_bitmapInfo;

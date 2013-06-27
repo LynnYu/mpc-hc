@@ -1,5 +1,5 @@
 /*
- * (C) 2009-2012 see Authors.txt
+ * (C) 2009-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -63,13 +63,13 @@ public:
     void  RenderHdmv(SubPicDesc& spd);
     void  RenderDvb(SubPicDesc& spd, short nX, short nY);
     void  WriteSeg(SubPicDesc& spd, short nX, short nY, short nCount, short nPaletteIndex);
-    void  SetPalette(int nNbEntry, HDMV_PALETTE* pPalette, bool bIsHD);
+    void  SetPalette(int nNbEntry, const HDMV_PALETTE* pPalette, bool bIsHD);
     void  SetPalette(int nNbEntry, DWORD* dwColors);
     bool  HavePalette() { return m_nColorNumber > 0; };
 
     CompositionObject* Copy() {
         CompositionObject* pCompositionObject = DEBUG_NEW CompositionObject(*this);
-        pCompositionObject->m_pRLEData = NULL;
+        pCompositionObject->m_pRLEData = nullptr;
         pCompositionObject->SetRLEData(m_pRLEData, m_nRLEDataSize, m_nRLEDataSize);
 
         return pCompositionObject;

@@ -140,7 +140,7 @@ public:
                 }
             }
 
-            return NULL;
+            return nullptr;
         }
 
     } m_streams[unknown];
@@ -160,7 +160,7 @@ public:
         };
         stream streams[64];
         struct program() {
-            memset(this, 0, sizeof(*this));
+            ZeroMemory(this, sizeof(*this));
         }
 
         BYTE ts_buffer[1024];

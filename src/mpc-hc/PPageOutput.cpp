@@ -223,7 +223,6 @@ BOOL CPPageOutput::OnInitDialog()
         TCHAR strGUID[50];
         CString cstrGUID;
         CString d3ddevice_str = _T("");
-        CStringArray adapterList;
 
         D3DADAPTER_IDENTIFIER9 adapterIdentifier;
 
@@ -402,7 +401,7 @@ BOOL CPPageOutput::OnApply()
     r.iDX9Resizer                           = m_iDX9Resizer;
     r.fVMR9MixerMode                        = !!m_fVMR9MixerMode;
     r.fVMR9MixerYUV                         = !!m_fVMR9MixerYUV;
-    r.m_AdvRendSets.bVMR9AlterativeVSync    = m_fVMR9AlterativeVSync != 0;
+    r.m_AdvRendSets.bVMR9AlterativeVSync    = m_fVMR9AlterativeVSync != FALSE;
     s.strAudioRendererDisplayName           = m_AudioRendererDisplayNames[m_iAudioRendererType];
     s.fD3DFullscreen                        = m_fD3DFullscreen ? true : false;
 
@@ -594,7 +593,6 @@ void CPPageOutput::OnDSRendererChange()
             m_wndToolTip.UpdateTipText(ResStr(IDC_DSSYNC), GetDlgItem(IDC_VIDRND_COMBO));
             break;
         case VIDRNDT_DS_MADVR:
-            GetDlgItem(IDC_FULLSCREEN_MONITOR_CHECK)->EnableWindow(TRUE);
             ((CComboBox*)GetDlgItem(IDC_DX_SURFACE))->SetCurSel(2);
 
             m_iDSDXVASupport.SetIcon(m_tick);

@@ -61,14 +61,16 @@ public:
     };
 
     struct HDMV_CLUT {
-        BYTE         id;
-        BYTE         version_number;
-        BYTE         size;
+        BYTE    id;
+        BYTE    version_number;
+        BYTE    size;
 
         HDMV_PALETTE palette[256];
 
-        HDMV_CLUT() : id(0), version_number(0), size(0) {
-            memset(palette, 0, sizeof(palette));
+        HDMV_CLUT() : id(0)
+            , version_number(0)
+            , size(0) {
+            ZeroMemory(palette, sizeof(palette));
         }
     };
 
@@ -108,11 +110,11 @@ public:
 
     virtual REFERENCE_TIME GetStart(POSITION nPos) {
         HDMV_PRESENTATION_SEGMENT* pPresentationSegment = m_pPresentationSegments.GetAt(nPos);
-        return pPresentationSegment != NULL ? pPresentationSegment->rtStart : INVALID_TIME;
+        return pPresentationSegment != nullptr ? pPresentationSegment->rtStart : INVALID_TIME;
     };
     virtual REFERENCE_TIME GetStop(POSITION nPos) {
         HDMV_PRESENTATION_SEGMENT* pPresentationSegment = m_pPresentationSegments.GetAt(nPos);
-        return pPresentationSegment != NULL ? pPresentationSegment->rtStop : INVALID_TIME;
+        return pPresentationSegment != nullptr ? pPresentationSegment->rtStop : INVALID_TIME;
     };
 
     void    Render(SubPicDesc& spd, REFERENCE_TIME rt, RECT& bbox);

@@ -379,7 +379,7 @@ HRESULT CFGManager::EnumSourceFilters(LPCWSTR lpcwstrFileName, CFGFilterList& fl
         CRegKey key;
         if (ERROR_SUCCESS == key.Open(HKEY_CLASSES_ROOT, _T("Media Type\\Extensions\\") + CString(ext), KEY_READ)) {
             ULONG len = _countof(buff);
-            memset(buff, 0, sizeof(buff));
+            ZeroMemory(buff, sizeof(buff));
             LONG ret = key.QueryStringValue(_T("Source Filter"), buff, &len); // QueryStringValue can return ERROR_INVALID_DATA on bogus strings (radlight mpc v1003, fixed in v1004)
             if (ERROR_SUCCESS == ret || ERROR_INVALID_DATA == ret && GUIDFromCString(buff) != GUID_NULL) {
                 GUID clsid = GUIDFromCString(buff);
@@ -1132,10 +1132,9 @@ STDMETHODIMP CFGManager::ConnectFilter(IBaseFilter* pBF, IPin* pPinIn)
 
             CLSID clsid;
             pBF->GetClassID(&clsid);
-            // Disable DVD subtitle mixing in EVR (CP) and Sync Renderer for Microsoft DTV-DVD Video Decoder, it's corrupt DVD playback ...
+            // Disable DVD subtitle mixing in EVR (CP) and Sync Renderer for Microsoft DTV-DVD Video Decoder, it corrupts DVD playback.
             if (clsid == CLSID_CMPEG2VidDecoderDS) {
                 if (s.iDSVideoRendererType == VIDRNDT_DS_EVR_CUSTOM || s.iDSVideoRendererType == VIDRNDT_DS_SYNC) {
-                    CString pin_name = GetPinName(pPin);
                     if (GetPinName(pPin)[0] == '~') {
                         continue;
                     }
@@ -1145,7 +1144,6 @@ STDMETHODIMP CFGManager::ConnectFilter(IBaseFilter* pBF, IPin* pPinIn)
             else if (clsid == CLSID_CMpeg2DecFilter
                      || clsid == CLSID_NvidiaVideoDecoder
                      || clsid == CLSID_SonicCinemasterVideoDecoder) {
-                CString pin_name = GetPinName(pPin);
                 if (GetPinName(pPin)[0] == '~') {
                     continue;
                 }
@@ -2396,7 +2394,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk)
 
         TCHAR buff[256];
         ULONG len = sizeof(buff);
-        memset(buff, 0, len);
+        ZeroMemory(buff, sizeof(buff));
 
         CString clsid = _T("{B38C58A0-1809-11D6-A458-EDAE78F1DF12}");
 
@@ -2726,10 +2724,8 @@ STDMETHODIMP CFGManagerDVD::AddSourceFilter(LPCWSTR lpcwstrFileName, LPCWSTR lpc
     HRESULT hr;
 
     CStringW fn = CStringW(lpcwstrFileName).TrimLeft();
-    CStringW protocol = fn.Left(fn.Find(':') + 1).TrimRight(':').MakeLower();
-    CStringW ext = CPathW(fn).GetExtension().MakeLower();
 
-    GUID clsid = ext == L".ratdvd" ? GUIDFromCString(_T("{482d10b6-376e-4411-8a17-833800A065DB}")) : CLSID_DVDNavigator;
+    GUID clsid = CLSID_DVDNavigator;
 
     CComPtr<IBaseFilter> pBF;
     if (FAILED(hr = pBF.CoCreateInstance(clsid))

@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -70,5 +70,13 @@ MIDL_INTERFACE("A273C7F6-25D4-46b0-B2C8-4F7FADC44E37")
 IVMRffdshow9 :
 public IUnknown {
 public:
-    virtual STDMETHODIMP support_ffdshow() = 0;
+    STDMETHOD(support_ffdshow()) PURE;
+};
+
+// Set and query D3DFullscreen mode.
+interface __declspec(uuid("8EA1E899-B77D-4777-9F0E-66421BEA50F8"))
+ID3DFullscreenControl :
+public IUnknown {
+    STDMETHOD(SetD3DFullscreen)(bool fEnabled) PURE;
+    STDMETHOD(GetD3DFullscreen)(bool * pfEnabled) PURE;
 };

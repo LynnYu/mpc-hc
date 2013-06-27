@@ -50,7 +50,7 @@ protected:
     bool m_bDeviceResetRequested;
     bool m_bPendingResetDevice;
 
-    void AlphaBltSubPic(CSize size, SubPicDesc* pTarget = NULL);
+    void AlphaBltSubPic(CSize size, SubPicDesc* pTarget = nullptr);
 
     XForm m_xform;
     void Transform(CRect r, Vector v[4]);
@@ -64,14 +64,14 @@ public:
 
     // ISubPicAllocatorPresenter
 
-    STDMETHODIMP CreateRenderer(IUnknown** ppRenderer) = 0;
+    STDMETHODIMP CreateRenderer(IUnknown** ppRenderer) PURE;
 
     STDMETHODIMP_(SIZE) GetVideoSize(bool fCorrectAR = true);
     STDMETHODIMP_(SIZE) GetVisibleVideoSize() {
         return m_NativeVideoSize;
     };
     STDMETHODIMP_(void) SetPosition(RECT w, RECT v);
-    STDMETHODIMP_(bool) Paint(bool fAll) = 0;
+    STDMETHODIMP_(bool) Paint(bool fAll) PURE;
 
     STDMETHODIMP_(void) SetTime(REFERENCE_TIME rtNow);
     STDMETHODIMP_(void) SetSubtitleDelay(int delay_ms);

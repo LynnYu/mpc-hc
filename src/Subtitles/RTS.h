@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -42,8 +42,8 @@ class CWord : public Rasterizer
 
     void Transform(CPoint org);
 
-    void Transform_C(CPoint& org);
-    void Transform_SSE2(CPoint& org);
+    void Transform_C(const CPoint& org);
+    void Transform_SSE2(const CPoint& org);
     bool CreateOpaqueBox();
 
 protected:
@@ -188,7 +188,7 @@ public:
 
     void CreateClippers(CSize size);
 
-    void MakeLines(CSize size, CRect marginRect);
+    void MakeLines(CSize size, const CRect& marginRect);
 };
 
 class CScreenLayoutAllocator
@@ -205,7 +205,7 @@ public:
     void Empty();
 
     void AdvanceToSegment(int segment, const CAtlArray<int>& sa);
-    CRect AllocRect(CSubtitle* s, int segment, int entry, int layer, int collisions);
+    CRect AllocRect(const CSubtitle* s, int segment, int entry, int layer, int collisions);
 };
 
 class __declspec(uuid("537DCACA-2812-4a4f-B2C6-1A34C17ADEB0"))
@@ -232,7 +232,7 @@ class __declspec(uuid("537DCACA-2812-4a4f-B2C6-1A34C17ADEB0"))
     void ParseString(CSubtitle* sub, CStringW str, STSStyle& style);
     void ParsePolygon(CSubtitle* sub, CStringW str, STSStyle& style);
     bool ParseSSATag(CSubtitle* sub, CStringW str, STSStyle& style, STSStyle& org, bool fAnimate = false);
-    bool ParseHtmlTag(CSubtitle* sub, CStringW str, STSStyle& style, STSStyle& org);
+    bool ParseHtmlTag(CSubtitle* sub, CStringW str, STSStyle& style, const STSStyle& org);
 
     double CalcAnimation(double dst, double src, bool fAnimate);
 
@@ -242,22 +242,22 @@ protected:
     virtual void OnChanged();
 
 public:
-    CRenderedTextSubtitle(CCritSec* pLock, STSStyle* styleOverride = NULL, bool doOverride = false);
+    CRenderedTextSubtitle(CCritSec* pLock, STSStyle* styleOverride = nullptr, bool doOverride = false);
     virtual ~CRenderedTextSubtitle();
 
     virtual void Copy(CSimpleTextSubtitle& sts);
     virtual void Empty();
 
     // call to signal this RTS to ignore any of the styles and apply the given override style
-    void SetOverride(bool doOverride = true, STSStyle* styleOverride = NULL) {
+    void SetOverride(bool doOverride = true, STSStyle* styleOverride = nullptr) {
         m_doOverrideStyle = doOverride;
-        if (styleOverride != NULL) {
+        if (styleOverride != nullptr) {
             m_pStyleOverride = styleOverride;
         }
     }
 
 public:
-    bool Init(CSize size, CRect vidrect); // will call Deinit()
+    bool Init(CSize size, const CRect& vidrect); // will call Deinit()
     void Deinit();
 
     DECLARE_IUNKNOWN

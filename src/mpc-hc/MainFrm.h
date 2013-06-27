@@ -183,6 +183,7 @@ class CMainFrame : public CFrameWnd, public CDropTarget
     CComPtr<IVMRMixerControl9> m_pVMRMC;
     CComPtr<IMFVideoDisplayControl> m_pMFVDC;
     CComPtr<IMFVideoProcessor> m_pMFVP;
+    CComPtr<IVMRWindowlessControl9> m_pVMRWC;
 
     CComPtr<ISubPicAllocatorPresenter> m_pCAP;
     CComPtr<ISubPicAllocatorPresenter2> m_pCAP2;
@@ -346,6 +347,7 @@ public:
 public:
     bool m_fFullScreen;
     bool m_fFirstFSAfterLaunchOnFS;
+    bool m_fStartInD3DFullscreen;
     bool m_fHideCursor;
     CMenu m_navaudio, m_navsubtitle;
 
@@ -411,7 +413,6 @@ protected:
     void OpenSetupCaptureBar();
     void OpenSetupWindowTitle(CString fn = _T(""));
     void AutoChangeMonitorMode();
-    double miFPS;
 
     bool GraphEventComplete();
 
@@ -444,6 +445,7 @@ public:
 
     CSize GetVideoSize() const;
     void ToggleFullscreen(bool fToNearest, bool fSwitchScreenResWhenHasTo);
+    void ToggleD3DFullscreen(bool fSwitchScreenResWhenHasTo);
     void MoveVideoWindow(bool fShowStats = false);
     void RepaintVideo();
     void HideVideoWindow(bool fHide);
@@ -457,11 +459,11 @@ public:
     DWORD SetupAudioStreams();
     DWORD SetupSubtitleStreams();
 
-    bool LoadSubtitle(CString fn, ISubStream** actualStream = NULL, bool bAutoLoad = false);
+    bool LoadSubtitle(CString fn, ISubStream** actualStream = nullptr, bool bAutoLoad = false);
     bool SetSubtitle(int i, bool bIsOffset = false, bool bDisplayMessage = false, bool bApplyDefStyle = false);
     void SetSubtitle(ISubStream* pSubStream, bool bApplyDefStyle = false);
     void ToggleSubtitleOnOff(bool bDisplayMessage = false);
-    void ReplaceSubtitle(ISubStream* pSubStreamOld, ISubStream* pSubStreamNew);
+    void ReplaceSubtitle(const ISubStream* pSubStreamOld, ISubStream* pSubStreamNew);
     void InvalidateSubtitle(DWORD_PTR nSubtitleId = -1, REFERENCE_TIME rtInvalidate = -1);
     void ReloadSubtitle();
     HRESULT InsertTextPassThruFilter(IBaseFilter* pBF, IPin* pPin, IPin* pPinto);
@@ -908,7 +910,7 @@ public:
     void        SetupVMR9ColorControl();
     void        SetColorControl(DWORD flags, int& brightness, int& contrast, int& hue, int& saturation);
     void        SetClosedCaptions(bool enable);
-    LPCTSTR     GetDVDAudioFormatName(DVD_AudioAttributes& ATR) const;
+    LPCTSTR     GetDVDAudioFormatName(const DVD_AudioAttributes& ATR) const;
     void        SetAudioDelay(REFERENCE_TIME rtShift);
     void        SetSubtitleDelay(int delay_ms);
     //void      AutoSelectTracks();
@@ -927,7 +929,7 @@ public:
     afx_msg void OnFileOpendirectory();
 
     void        SendCurrentPositionToApi(bool fNotifySeek = false);
-    void        ShowOSDCustomMessageApi(MPC_OSDDATA* osdData);
+    void        ShowOSDCustomMessageApi(const MPC_OSDDATA* osdData);
     void        JumpOfNSeconds(int seconds);
 
     CString GetVidPos() const;

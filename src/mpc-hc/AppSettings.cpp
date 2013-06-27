@@ -343,8 +343,8 @@ void CAppSettings::CreateCommands()
     ADDCMD((ID_VIEW_PRESETS_MINIMAL,            '1', FVIRTKEY | FNOINVERT,                    IDS_AG_VIEW_MINIMAL));
     ADDCMD((ID_VIEW_PRESETS_COMPACT,            '2', FVIRTKEY | FNOINVERT,                    IDS_AG_VIEW_COMPACT));
     ADDCMD((ID_VIEW_PRESETS_NORMAL,             '3', FVIRTKEY | FNOINVERT,                    IDS_AG_VIEW_NORMAL));
-    ADDCMD((ID_VIEW_FULLSCREEN,           VK_RETURN, FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_FULLSCREEN, 0, wmcmd::LDBLCLK, wmcmd::LDBLCLK));
-    ADDCMD((ID_VIEW_FULLSCREEN_SECONDARY, VK_RETURN, FVIRTKEY | FALT | FNOINVERT,             IDS_MPLAYERC_39));
+    ADDCMD((ID_VIEW_FULLSCREEN,           VK_RETURN, FVIRTKEY | FALT | FNOINVERT,             IDS_AG_FULLSCREEN, 0, wmcmd::LDBLCLK, wmcmd::LDBLCLK));
+    ADDCMD((ID_VIEW_FULLSCREEN_SECONDARY,    VK_F11, FVIRTKEY | FNOINVERT,                    IDS_MPLAYERC_39));
     ADDCMD((ID_VIEW_ZOOM_50,                    '1', FVIRTKEY | FALT | FNOINVERT,             IDS_AG_ZOOM_50));
     ADDCMD((ID_VIEW_ZOOM_100,                   '2', FVIRTKEY | FALT | FNOINVERT,             IDS_AG_ZOOM_100));
     ADDCMD((ID_VIEW_ZOOM_200,                   '3', FVIRTKEY | FALT | FNOINVERT,             IDS_AG_ZOOM_200));
@@ -440,7 +440,7 @@ void CAppSettings::CreateCommands()
     ADDCMD((ID_VIEW_REMAINING_TIME,             'I', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_MPLAYERC_98));
     ADDCMD((ID_SHADERS_TOGGLE,                  'P', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AT_TOGGLE_SHADER));
     ADDCMD((ID_SHADERS_TOGGLE_SCREENSPACE,      'P', FVIRTKEY | FCONTROL | FALT | FNOINVERT,  IDS_AT_TOGGLE_SHADERSCREENSPACE));
-    ADDCMD((ID_D3DFULLSCREEN_TOGGLE,            'F', FVIRTKEY | FCONTROL | FALT | FNOINVERT,  IDS_MPLAYERC_99));
+    ADDCMD((ID_D3DFULLSCREEN_TOGGLE,              0, FVIRTKEY | FNOINVERT,                    IDS_MPLAYERC_99));
     ADDCMD((ID_GOTO_PREV_SUB,                   'Y', FVIRTKEY | FNOINVERT,                    IDS_MPLAYERC_100,  APPCOMMAND_BROWSER_BACKWARD));
     ADDCMD((ID_GOTO_NEXT_SUB,                   'U', FVIRTKEY | FNOINVERT,                    IDS_MPLAYERC_101,  APPCOMMAND_BROWSER_FORWARD));
     ADDCMD((ID_SHIFT_SUB_DOWN,              VK_NEXT, FVIRTKEY | FALT | FNOINVERT,             IDS_MPLAYERC_102));
@@ -483,13 +483,10 @@ CAppSettings::~CAppSettings()
 
 bool CAppSettings::IsD3DFullscreen() const
 {
-    if (nCLSwitches & CLSW_D3DFULLSCREEN) {
-        return true;
-    } else if (iDSVideoRendererType == VIDRNDT_DS_VMR9RENDERLESS ||
-               iDSVideoRendererType == VIDRNDT_DS_EVR_CUSTOM ||
-               iDSVideoRendererType == VIDRNDT_DS_MADVR ||
-               iDSVideoRendererType == VIDRNDT_DS_SYNC) {
-        return fD3DFullscreen;
+    if (iDSVideoRendererType == VIDRNDT_DS_VMR9RENDERLESS ||
+            iDSVideoRendererType == VIDRNDT_DS_EVR_CUSTOM ||
+            iDSVideoRendererType == VIDRNDT_DS_SYNC) {
+        return fD3DFullscreen || (nCLSwitches & CLSW_D3DFULLSCREEN);
     } else {
         return false;
     }
@@ -681,7 +678,6 @@ void CAppSettings::SaveSettings()
     POSITION pos = m_DVBChannels.GetHeadPosition();
     while (pos) {
         CString strTemp2;
-        CString strChannel;
         CDVBChannel& Channel = m_DVBChannels.GetNext(pos);
         strTemp2.Format(_T("%d"), iChannel);
         pApp->WriteProfileString(IDS_R_DVB, strTemp2, Channel.ToString());
@@ -1163,7 +1159,7 @@ void CAppSettings::LoadSettings()
     if (bResult && len == sizeof(pSpeakerToChannelMap)) {
         memcpy(pSpeakerToChannelMap, ptr, sizeof(pSpeakerToChannelMap));
     } else {
-        memset(pSpeakerToChannelMap, 0, sizeof(pSpeakerToChannelMap));
+        ZeroMemory(pSpeakerToChannelMap, sizeof(pSpeakerToChannelMap));
         for (int j = 0; j < 18; j++) {
             for (int i = 0; i <= j; i++) {
                 pSpeakerToChannelMap[j][i] = 1 << i;
@@ -1650,7 +1646,7 @@ void CAppSettings::UpdateRenderersData(bool fSave)
     }
 }
 
-__int64 CAppSettings::ConvertTimeToMSec(CString& time) const
+__int64 CAppSettings::ConvertTimeToMSec(const CString& time) const
 {
     __int64 Sec = 0;
     __int64 mSec = 0;
@@ -1736,7 +1732,7 @@ void CAppSettings::ParseCommandLine(CAtlList<CString>& cmdln)
     rtShift = 0;
     lDVDTitle = 0;
     lDVDChapter = 0;
-    memset(&DVDPosition, 0, sizeof(DVDPosition));
+    ZeroMemory(&DVDPosition, sizeof(DVDPosition));
     iAdminOption = 0;
     sizeFixedWindow.SetSize(0, 0);
     iMonitor = 0;

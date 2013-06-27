@@ -58,7 +58,7 @@ enum {
 extern HICON LoadIcon(CString fn, bool fSmall);
 extern bool LoadType(CString fn, CString& type);
 extern bool LoadResource(UINT resid, CStringA& str, LPCTSTR restype);
-extern CStringA GetContentType(CString fn, CAtlList<CString>* redir = NULL);
+extern CStringA GetContentType(CString fn, CAtlList<CString>* redir = nullptr);
 extern WORD AssignedToCmd(UINT keyOrMouseValue, bool bIsFullScreen = false, bool bCheckMouse = true);
 
 typedef enum {
@@ -86,14 +86,14 @@ __inline DXVA2_Fixed32 IntToFixed(__in const int _int_, __in const short divisor
     return _fixed_;
 }
 
-__inline int FixedToInt(__in const DXVA2_Fixed32 _fixed_, __in const short factor = 1)
+__inline int FixedToInt(__in const DXVA2_Fixed32& _fixed_, __in const short factor = 1)
 {
     // special converter that is resistant to MS bugs
     return (int)_fixed_.Value * factor + ((int)_fixed_.Fraction * factor + 0x8000) / 0x10000;
 }
 
-extern void GetCurDispMode(dispmode& dm, CString& DisplayName);
-extern bool GetDispMode(int i, dispmode& dm, CString& DisplayName);
+extern void GetCurDispMode(dispmode& dm, const CString& DisplayName);
+extern bool GetDispMode(int i, dispmode& dm, const CString& DisplayName);
 extern void SetDispMode(const dispmode& dm, CString& DisplayName);
 extern void SetAudioRenderer(int AudioDevNo);
 
@@ -151,7 +151,7 @@ public:
     void FlushProfile();
     virtual BOOL GetProfileBinary(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPBYTE* ppData, UINT* pBytes);
     virtual UINT GetProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nDefault);
-    virtual CString GetProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszDefault = NULL);
+    virtual CString GetProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszDefault = nullptr);
     virtual BOOL WriteProfileBinary(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPBYTE pData, UINT nBytes);
     virtual BOOL WriteProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nValue);
     virtual BOOL WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszValue);

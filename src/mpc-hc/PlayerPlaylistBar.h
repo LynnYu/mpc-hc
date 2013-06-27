@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -56,7 +56,7 @@ private:
     void SetupList();
     void UpdateList();
     void EnsureVisible(POSITION pos);
-    int FindItem(POSITION pos) const;
+    int FindItem(const POSITION pos) const;
     POSITION FindPos(int i);
 
     CImageList* m_pDragImage;
@@ -100,8 +100,8 @@ public:
     void Refresh();
     bool Empty();
 
-    void Open(CAtlList<CString>& fns, bool fMulti, CAtlList<CString>* subs = NULL);
-    void Append(CAtlList<CString>& fns, bool fMulti, CAtlList<CString>* subs = NULL);
+    void Open(CAtlList<CString>& fns, bool fMulti, CAtlList<CString>* subs = nullptr);
+    void Append(CAtlList<CString>& fns, bool fMulti, CAtlList<CString>* subs = nullptr);
 
     void Open(CStringW vdn, CStringW adn, int vinput, int vchannel, int ainput);
     void Append(CStringW vdn, CStringW adn, int vinput, int vchannel, int ainput);

@@ -48,7 +48,7 @@ bool SetPrivilege(LPCTSTR privilege, bool bEnable)
     return (GetLastError() == ERROR_SUCCESS);
 }
 
-CString GetHiveName(HKEY hive)
+CString GetHiveName(const HKEY hive)
 {
     switch ((ULONG_PTR)hive) {
         case (ULONG_PTR)HKEY_CLASSES_ROOT:
@@ -206,7 +206,7 @@ int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX* /*lpelfe*/, NEWTEXTMETRICEX* /*lpn
 
 void GetMessageFont(LOGFONT* lf)
 {
-    SecureZeroMemory(lf, sizeof(LOGFONT));
+    ZeroMemory(lf, sizeof(LOGFONT));
     NONCLIENTMETRICS ncm;
     ncm.cbSize = sizeof(NONCLIENTMETRICS);
     if (!SysVersion::IsVistaOrLater()) {
@@ -219,7 +219,7 @@ void GetMessageFont(LOGFONT* lf)
 
 void GetStatusFont(LOGFONT* lf)
 {
-    SecureZeroMemory(lf, sizeof(LOGFONT));
+    ZeroMemory(lf, sizeof(LOGFONT));
     NONCLIENTMETRICS ncm;
     ncm.cbSize = sizeof(NONCLIENTMETRICS);
     if (!SysVersion::IsVistaOrLater()) {
@@ -238,7 +238,8 @@ bool IsFontInstalled(LPCTSTR lpszFont)
         return false;
     }
 
-    LOGFONT lf = {0};
+    LOGFONT lf;
+    ZeroMemory(&lf, sizeof(LOGFONT));
     // Any character set will do
     lf.lfCharSet = DEFAULT_CHARSET;
     // Set the facename to check for
@@ -252,21 +253,14 @@ bool IsFontInstalled(LPCTSTR lpszFont)
 
 bool ExploreToFile(LPCTSTR path)
 {
+    CoInitializeHelper co;
+
     bool success = false;
-    HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    if (res == RPC_E_CHANGED_MODE) { // Try another threading model
-        res = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    }
+    PIDLIST_ABSOLUTE pidl;
 
-    if (res == S_OK || res == S_FALSE) {
-        PIDLIST_ABSOLUTE pidl;
-
-        if (SHParseDisplayName(path, nullptr, &pidl, 0, nullptr) == S_OK) {
-            success = SUCCEEDED(SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0));
-            CoTaskMemFree(pidl);
-        }
-
-        CoUninitialize();
+    if (SHParseDisplayName(path, nullptr, &pidl, 0, nullptr) == S_OK) {
+        success = SUCCEEDED(SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0));
+        CoTaskMemFree(pidl);
     }
 
     return success;
@@ -289,4 +283,20 @@ CString GetProgramPath(bool bWithExecutableName /*= false*/)
     }
 
     return path;
+}
+
+CoInitializeHelper::CoInitializeHelper()
+{
+    HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    if (res == RPC_E_CHANGED_MODE) { // Try another threading model
+        res = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    }
+    if (res != S_OK && res != S_FALSE) {
+        throw res;
+    }
+}
+
+CoInitializeHelper::~CoInitializeHelper()
+{
+    CoUninitialize();
 }

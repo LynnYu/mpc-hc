@@ -605,7 +605,7 @@ void CPlayerPlaylistBar::EnsureVisible(POSITION pos)
     m_list.Invalidate();
 }
 
-int CPlayerPlaylistBar::FindItem(POSITION pos) const
+int CPlayerPlaylistBar::FindItem(const POSITION pos) const
 {
     for (int i = 0; i < m_list.GetItemCount(); i++) {
         if ((POSITION)m_list.GetItemData(i) == pos) {
@@ -776,8 +776,7 @@ OpenMediaData* CPlayerPlaylistBar::GetCurOMD(REFERENCE_TIME rtStart)
 
     CString fn = CString(pli->m_fns.GetHead()).MakeLower();
 
-    if (fn.Find(_T("video_ts.ifo")) >= 0
-            || fn.Find(_T(".ratdvd")) >= 0) {
+    if (fn.Find(_T("video_ts.ifo")) >= 0) {
         if (OpenDVDData* p = DEBUG_NEW OpenDVDData()) {
             p->path = pli->m_fns.GetHead();
             p->subs.AddTailList(&pli->m_subs);

@@ -384,6 +384,8 @@ STDMETHODIMP CEVRAllocatorPresenter::NonDelegatingQueryInterface(REFIID riid, vo
         //      hr = GetInterface((IDirect3DDeviceManager9*)this, ppv);
     {
         hr = m_pD3DManager->QueryInterface(__uuidof(IDirect3DDeviceManager9), (void**) ppv);
+    } else if (riid == __uuidof(ID3DFullscreenControl)) {
+        hr = GetInterface((ID3DFullscreenControl*)this, ppv);
     } else {
         hr = __super::NonDelegatingQueryInterface(riid, ppv);
     }
@@ -1029,7 +1031,7 @@ HRESULT CEVRAllocatorPresenter::RenegotiateMediaType()
             hr = m_pMixer->SetOutputType(0, pType, MFT_SET_TYPE_TEST_ONLY);
         }
 
-        int Merit;
+        int Merit = 0;
         if (SUCCEEDED(hr)) {
             hr = GetMediaTypeMerit(pType, &Merit);
         }
@@ -1111,7 +1113,7 @@ bool CEVRAllocatorPresenter::GetImageFromMixer()
             break;
         }
 
-        memset(&Buffer, 0, sizeof(Buffer));
+        ZeroMemory(&Buffer, sizeof(Buffer));
         Buffer.pSample = pSample;
         pSample->GetUINT32(GUID_SURFACE_INDEX, &dwSurface);
 
@@ -1267,8 +1269,8 @@ STDMETHODIMP CEVRAllocatorPresenter::GetIdealVideoSize(SIZE* pszMin, SIZE* pszMa
 
     if (pszMax) {
         D3DDISPLAYMODE d3ddm;
-
         ZeroMemory(&d3ddm, sizeof(d3ddm));
+
         if (SUCCEEDED(m_pD3D->GetAdapterDisplayMode(GetAdapter(m_pD3D), &d3ddm))) {
             pszMax->cx = d3ddm.Width;
             pszMax->cy = d3ddm.Height;
@@ -1315,8 +1317,15 @@ STDMETHODIMP CEVRAllocatorPresenter::GetAspectRatioMode(DWORD* pdwAspectRatioMod
 
 STDMETHODIMP CEVRAllocatorPresenter::SetVideoWindow(HWND hwndVideo)
 {
-    ASSERT(m_hWnd == hwndVideo);    // What if not ??
-    //m_hWnd = hwndVideo;
+    if (m_hWnd != hwndVideo) {
+        CAutoLock lock(this);
+        CAutoLock lock2(&m_ImageProcessingLock);
+        CAutoLock cRenderLock(&m_RenderLock);
+
+        m_hWnd = hwndVideo;
+        m_bPendingResetDevice = true;
+        SendResetRequest();
+    }
     return S_OK;
 }
 
@@ -1367,14 +1376,15 @@ STDMETHODIMP CEVRAllocatorPresenter::GetRenderingPrefs(DWORD* pdwRenderFlags)
 
 STDMETHODIMP CEVRAllocatorPresenter::SetFullscreen(BOOL fFullscreen)
 {
-    ASSERT(FALSE);
-    return E_NOTIMPL;
+    m_bIsFullscreen = !!fFullscreen;
+    return S_OK;
 }
 
 STDMETHODIMP CEVRAllocatorPresenter::GetFullscreen(BOOL* pfFullscreen)
 {
-    ASSERT(FALSE);
-    return E_NOTIMPL;
+    CheckPointer(pfFullscreen, E_POINTER);
+    *pfFullscreen = m_bIsFullscreen;
+    return S_OK;
 }
 
 
@@ -1932,7 +1942,6 @@ STDMETHODIMP_(bool) CEVRAllocatorPresenter::DisplayChange()
     ZeroMemory(m_DetectedFrameTimeHistoryHistory, sizeof(m_DetectedFrameTimeHistoryHistory));
     m_DetectedFrameTimePos = 0;
     ZeroMemory(&m_VMR9AlphaBitmap, sizeof(m_VMR9AlphaBitmap));
-
     ZeroMemory(m_ldDetectedRefreshRateList, sizeof(m_ldDetectedRefreshRateList));
     ZeroMemory(m_ldDetectedScanlineRateList, sizeof(m_ldDetectedScanlineRateList));
     m_DetectedRefreshRatePos = 0;
@@ -1941,8 +1950,8 @@ STDMETHODIMP_(bool) CEVRAllocatorPresenter::DisplayChange()
     m_DetectedScanlineTimePrim = 0;
     m_DetectedRefreshRate = 0;
 
-    memset(m_pllJitter, 0, sizeof(m_pllJitter));
-    memset(m_pllSyncOffset, 0, sizeof(m_pllSyncOffset));
+    ZeroMemory(m_pllJitter, sizeof(m_pllJitter));
+    ZeroMemory(m_pllSyncOffset, sizeof(m_pllSyncOffset));
     m_nNextJitter       = 0;
     m_nNextSyncOffset = 0;
     m_llLastPerf        = 0;

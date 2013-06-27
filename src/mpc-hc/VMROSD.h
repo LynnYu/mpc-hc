@@ -68,11 +68,13 @@ public:
     void SetRange(__int64 start,  __int64 stop);
     void GetRange(__int64& start, __int64& stop);
 
-    void SetSize(CRect wndRect, CRect videoRect);
+    void SetSize(const CRect& wndRect, const CRect& videoRect);
     bool OnMouseMove(UINT nFlags, CPoint point);
     bool OnLButtonDown(UINT nFlags, CPoint point);
     bool OnLButtonUp(UINT nFlags, CPoint point);
 
+    void EnableShowSeekBar(bool enabled = true);
+    void SetVideoWindow(CWnd* pWnd);
 private:
     CComPtr<IVMRMixerBitmap9>    m_pVMB;
     CComPtr<IMFVideoMixerBitmap> m_pMFVMB;
@@ -120,7 +122,7 @@ private:
     void UpdateBitmap();
     void UpdateSeekBarPos(CPoint point);
     void DrawSlider(CRect* rect, __int64 llMin, __int64 llMax, __int64 llPos);
-    void DrawRect(CRect* rect, CBrush* pBrush = NULL, CPen* pPen = NULL);
+    void DrawRect(const CRect* rect, CBrush* pBrush = nullptr, CPen* pPen = nullptr);
     void Invalidate();
     void DrawMessage();
     void DrawDebug();

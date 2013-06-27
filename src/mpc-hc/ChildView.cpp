@@ -105,7 +105,7 @@ BOOL CChildView::PreTranslateMessage(MSG* pMsg)
     return CWnd::PreTranslateMessage(pMsg);
 }
 
-void CChildView::SetVideoRect(CRect r)
+void CChildView::SetVideoRect(const CRect& r)
 {
     m_vrect = r;
 
@@ -141,7 +141,8 @@ void CChildView::LoadLogo()
 
 CSize CChildView::GetLogoSize()
 {
-    BITMAP bitmap = {0};
+    BITMAP bitmap;
+    ZeroMemory(&bitmap, sizeof(BITMAP));
     m_logo.GetBitmap(&bitmap);
     return CSize(bitmap.bmWidth, bitmap.bmHeight);
 }

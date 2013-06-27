@@ -127,7 +127,7 @@ CMpcAudioRenderer::CMpcAudioRenderer(LPUNKNOWN punk, HRESULT* phr)
             m_bMuteFastForward = !!dw;
         }
         len = _countof(buff);
-        memset(buff, 0, sizeof(buff));
+        ZeroMemory(buff, sizeof(buff));
         if (ERROR_SUCCESS == key.QueryStringValue(_T("SoundDevice"), buff, &len)) {
             m_csSound_Device = CString(buff);
         }
@@ -721,7 +721,7 @@ HRESULT CMpcAudioRenderer::ClearBuffer()
 
         hr = m_pDSBuffer->Lock(0, 0, &pDSLockedBuffer, &dwDSLockedSize, nullptr, nullptr, DSBLOCK_ENTIREBUFFER);
         if (SUCCEEDED(hr)) {
-            memset(pDSLockedBuffer, 0, dwDSLockedSize);
+            ZeroMemory(pDSLockedBuffer, dwDSLockedSize);
             hr = m_pDSBuffer->Unlock(pDSLockedBuffer, dwDSLockedSize, nullptr, 0);
         }
     }
@@ -734,7 +734,6 @@ HRESULT CMpcAudioRenderer::InitCoopLevel()
     HRESULT hr = S_OK;
     IVideoWindow* pVideoWindow = nullptr;
     HWND hWnd = nullptr;
-    CComBSTR bstrCaption;
 
     hr = m_pGraph->QueryInterface(__uuidof(IVideoWindow), (void**) &pVideoWindow);
     if (SUCCEEDED(hr)) {
@@ -1149,7 +1148,7 @@ HRESULT CMpcAudioRenderer::GetAudioDevice(IMMDevice** ppMMDevice)
     return hr;
 }
 
-bool CMpcAudioRenderer::CheckFormatChanged(WAVEFORMATEX* pWaveFormatEx, WAVEFORMATEX** ppNewWaveFormatEx)
+bool CMpcAudioRenderer::CheckFormatChanged(const WAVEFORMATEX* pWaveFormatEx, WAVEFORMATEX** ppNewWaveFormatEx)
 {
     bool formatChanged = false;
     if (m_pWaveFileFormat == nullptr) {
