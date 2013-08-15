@@ -294,6 +294,8 @@ class CMainFrame : public CFrameWnd, public CDropTarget
     bool m_fEndOfStream;
 
     LARGE_INTEGER m_liLastSaveTime;
+    bool m_bRememberFilePos;
+
     DWORD m_dwLastRun;
 
     bool m_fBuffering;
@@ -407,6 +409,7 @@ protected:
     void OpenSetupVideo();
     void OpenSetupAudio();
     void OpenSetupInfoBar();
+    void UpdateChapterInInfoBar();
     void OpenSetupStatsBar();
     void OpenSetupStatusBar();
     // void OpenSetupToolBar();
@@ -581,6 +584,8 @@ public:
     afx_msg LRESULT OnRepaintRenderLess(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnResumeFromState(WPARAM wParam, LPARAM lParam);
 
+    afx_msg void SaveAppSettings();
+
     BOOL OnButton(UINT id, UINT nFlags, CPoint point);
     afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
     afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
@@ -640,6 +645,7 @@ public:
     afx_msg void OnFileOpendevice();
     afx_msg void OnFileOpenCD(UINT nID);
     afx_msg void OnFileReopen();
+    afx_msg void OnFileRecycle();
     afx_msg void OnDropFiles(HDROP hDropInfo); // no menu item
     afx_msg void OnFileSaveAs();
     afx_msg void OnUpdateFileSaveAs(CCmdUI* pCmdUI);
@@ -948,12 +954,25 @@ protected:
 
     DWORD m_nMenuHideTick;
     UINT m_nSeekDirection;
+
+    void UpdateSkypeHandler();
+    void UpdateSeekbarChapterBag();
 public:
     afx_msg UINT OnPowerBroadcast(UINT nPowerEvent, UINT nEventData);
     afx_msg void OnSessionChange(UINT nSessionState, UINT nId);
 
     void EnableShaders1(bool enable);
     void EnableShaders2(bool enable);
+
+    enum UpdateControlTarget {
+        UPDATE_VOLUME_STEP,
+        UPDATE_LOGO,
+        UPDATE_SKYPE,
+        UPDATE_SEEKBAR_CHAPTERS,
+        UPDATE_WINDOW_TITLE,
+    };
+
+    void UpdateControlState(UpdateControlTarget target);
 
     CAtlList<CHdmvClipInfo::PlaylistItem> m_MPLSPlaylist;
     bool m_bIsBDPlay;

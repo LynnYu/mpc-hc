@@ -41,7 +41,7 @@ See [CONTRIBUTING.md](/CONTRIBUTING.md) for more info.
 * [Support Trac](https://trac.mpc-hc.org)
 * IRC Channel: [#mpc-hc](http://webchat.freenode.net/?randomnick=1&channels=mpc-hc&prompt=1&uio=d4)
   / [#mpc-hc-dev](http://webchat.freenode.net/?randomnick=1&channels=mpc-hc-dev&prompt=1&uio=d4) at [Freenode](http://freenode.net/)
-* [Donations](http://sourceforge.net/donate/index.php?group_id=170561)
+* [Donations](http://mpc-hc.org/donate/)
 
 
 For the people involved in the development, see
@@ -69,11 +69,6 @@ MPC-HC makes use of the following third-party code:
         <td>http://atlserver.codeplex.com/</td>
     </tr>
     <tr>
-        <td>Bento4</td>
-        <td>GPLv2</td>
-        <td>http://www.bok.net/trac/bento4/</td>
-    </tr>
-    <tr>
         <td>CLineNumberEdit</td>
         <td>-</td>
         <td>http://www.codeproject.com/Articles/6385/Controls-in-controls-A-line-numbering-edit-box</td>
@@ -84,29 +79,9 @@ MPC-HC makes use of the following third-party code:
         <td>http://www.datamekanix.com/sizecbar/</td>
     </tr>
     <tr>
-        <td>Detours</td>
-        <td>MSR-SSLA</td>
-        <td>http://research.microsoft.com/en-us/projects/detours/</td>
-    </tr>
-    <tr>
-        <td>FFmpeg</td>
+        <td>LAV Filters</td>
         <td>GPLv2</td>
-        <td>http://www.ffmpeg.org/</td>
-    </tr>
-    <tr>
-        <td>libflac</td>
-        <td>GPLv2 / New BSD License</td>
-        <td>http://flac.sourceforge.net/</td>
-    </tr>
-    <tr>
-        <td>libmpeg2</td>
-        <td>GPLv2</td>
-        <td>http://libmpeg2.sourceforge.net/</td>
-    </tr>
-    <tr>
-        <td>libogg</td>
-        <td>New BSD License</td>
-        <td>http://www.xiph.org/</td>
+        <td>http://code.google.com/p/lavfilters/</td>
     </tr>
     <tr>
         <td>Little CMS</td>
@@ -121,7 +96,12 @@ MPC-HC makes use of the following third-party code:
     <tr>
         <td>MediaInfoLib</td>
         <td>Simplified BSD License</td>
-        <td>http://mediainfo.sourceforge.net/</td>
+        <td>http://mediaarea.net/MediaInfo</td>
+    </tr>
+    <tr>
+        <td>Mhook</td>
+        <td>MIT License</td>
+        <td>http://codefromthe70s.org/mhook23.aspx</td>
     </tr>
     <tr>
         <td>MultiMon</td>

@@ -44,7 +44,7 @@ SET ARGCL=0
 SET ARGCOMP=0
 SET ARGD=0
 SET ARGF=0
-SET ARGFF=0
+SET ARGLAVF=0
 SET ARGL=0
 SET ARGM=0
 SET ARGPL=0
@@ -60,7 +60,7 @@ FOR %%G IN (%ARG%) DO (
   IF /I "%%G" == "CopyDXDll"    ENDLOCAL & CALL :SubCopyDXDll x86 & CALL :SubCopyDXDll x64 & EXIT /B
   IF /I "%%G" == "CopyDX"       ENDLOCAL & CALL :SubCopyDXDll x86 & CALL :SubCopyDXDll x64 & EXIT /B
   IF /I "%%G" == "Build"        SET "BUILDTYPE=Build"    & SET /A ARGB+=1
-  IF /I "%%G" == "Clean"        SET "BUILDTYPE=Clean"    & SET /A ARGB+=1  & SET /A ARGCL+=1 & SET /A ARGFF+=1
+  IF /I "%%G" == "Clean"        SET "BUILDTYPE=Clean"    & SET /A ARGB+=1  & SET /A ARGCL+=1 & SET /A ARGLAVF+=1
   IF /I "%%G" == "Rebuild"      SET "BUILDTYPE=Rebuild"  & SET /A ARGB+=1  & SET /A ARGRE+=1
   IF /I "%%G" == "Both"         SET "PPLATFORM=Both"     & SET /A ARGPL+=1
   IF /I "%%G" == "Win32"        SET "PPLATFORM=Win32"    & SET /A ARGPL+=1 & SET /A ARGANL-=1
@@ -84,7 +84,7 @@ FOR %%G IN (%ARG%) DO (
   IF /I "%%G" == "Installer"    SET "INSTALLER=True"     & SET /A VALID+=1 & SET /A ARGCL+=1 & SET /A ARGD+=1 & SET /A ARGF+=1 & SET /A ARGM+=1
   IF /I "%%G" == "7z"           SET "ZIP=True"           & SET /A VALID+=1 & SET /A ARGCL+=1 & SET /A ARGM+=1
   IF /I "%%G" == "Lite"         SET "MPCHC_LITE=True"    & SET /A VALID+=1 & SET /A ARGL+=1
-  IF /I "%%G" == "FFmpeg"       SET "Rebuild=FFmpeg"     & SET /A VALID+=1 & SET /A ARGFF+=1 & SET /A ARGRE+=1
+  IF /I "%%G" == "LAVFilters"   SET "Rebuild=LAVFilters" & SET /A VALID+=1 & SET /A ARGLAVF+=1 & SET /A ARGRE+=1
   IF /I "%%G" == "Silent"       SET "SILENT=True"        & SET /A VALID+=1
   IF /I "%%G" == "Nocolors"     SET "NOCOLORS=True"      & SET /A VALID+=1
   IF /I "%%G" == "Analyze"      SET "ANALYZE=True"       & SET /A VALID+=1 & SET /A ARGANL+=1
@@ -103,7 +103,7 @@ IF %ARGCOMP% GTR 1 (GOTO UnsupportedSwitch) ELSE IF %ARGCOMP% == 0 (SET "COMPILE
 IF %ARGCL%   GTR 1 (GOTO UnsupportedSwitch)
 IF %ARGD%    GTR 1 (GOTO UnsupportedSwitch)
 IF %ARGF%    GTR 1 (GOTO UnsupportedSwitch)
-IF %ARGFF%   GTR 1 (GOTO UnsupportedSwitch)
+IF %ARGLAVF% GTR 1 (GOTO UnsupportedSwitch)
 IF %ARGL%    GTR 1 (GOTO UnsupportedSwitch)
 IF %ARGM%    GTR 1 (GOTO UnsupportedSwitch)
 IF %ARGRE%   GTR 1 (GOTO UnsupportedSwitch)
@@ -120,7 +120,6 @@ IF /I "%COMPILER%" == "VS2012" (
   IF NOT DEFINED VS100COMNTOOLS GOTO MissingVar
   SET "TOOLSET=%VS100COMNTOOLS%..\..\VC\vcvarsall.bat"
   SET "BIN_DIR=bin"
-  SET "SLN_SUFFIX="
 )
 
 IF EXIST "%~dp0signinfo.txt" (
@@ -155,7 +154,13 @@ GOTO End
 :Main
 IF %ERRORLEVEL% NEQ 0 EXIT /B
 
-IF /I "%Rebuild%" == "FFmpeg" CALL "src\thirdparty\ffmpeg\gccbuild.bat" Rebuild %PPLATFORM% %BUILDCFG% %COMPILER%
+IF /I "%PPLATFORM%" == "x64" (
+  SET "LAVFILTERSDIR=LAVFilters64"
+) ELSE (
+  SET "LAVFILTERSDIR=LAVFilters"
+)
+
+IF /I "%Rebuild%" == "LAVFilters" CALL "src\thirdparty\LAVFilters\build_lavfilters.bat" Rebuild %PPLATFORM% %BUILDCFG% %COMPILER%
 IF %ERRORLEVEL% NEQ 0 ENDLOCAL & EXIT /B
 
 REM Always use x86_amd64 compiler, even on 64bit windows, because this is what VS is doing
@@ -238,6 +243,9 @@ IF %ERRORLEVEL% NEQ 0 (
   CALL :SubMsg "INFO" "mpc-hc%SLN_SUFFIX%.sln %BUILDCFG% %1 compiled successfully"
 )
 IF /I "%SIGN%" == "True" CALL :SubSign MPC-HC mpc-hc*.exe
+IF /I "%SIGN%" == "True" CALL :SubSign MPC-HC *.dll %LAVFILTERSDIR%
+IF /I "%SIGN%" == "True" CALL :SubSign MPC-HC *.ax %LAVFILTERSDIR%
+
 EXIT /B
 
 
@@ -376,11 +384,14 @@ IF EXIST "%PCKG_NAME%.7z"     DEL "%PCKG_NAME%.7z"
 IF EXIST "%PCKG_NAME%.pdb.7z" DEL "%PCKG_NAME%.pdb.7z"
 IF EXIST "%PCKG_NAME%"        RD /Q /S "%PCKG_NAME%"
 
+SET "PDB_FILES=*.pdb"
+IF NOT DEFINED MPCHC_LITE (SET "PDB_FILES=%PDB_FILES% %LAVFILTERSDIR%\*.pdb")
+
 REM Compress the pdb file for mpc-hc only
 IF /I "%NAME%" == "MPC-HC" (
   PUSHD "%~1_%ARCH%"
   TITLE Creating archive %PCKG_NAME%.pdb.7z...
-  START "7z" /B /WAIT "%SEVENZIP%" a -t7z "%PCKG_NAME%.pdb.7z" "*.pdb" -m0=LZMA -mx9 -ms=on
+  START "7z" /B /WAIT "%SEVENZIP%" a -t7z "%PCKG_NAME%.pdb.7z" %PDB_FILES% -m0=LZMA -mx9 -ms=on
   IF %ERRORLEVEL% NEQ 0 CALL :SubMsg "ERROR" "Unable to create %PCKG_NAME%.pdb.7z!" & EXIT /B
   CALL :SubMsg "INFO" "%PCKG_NAME%.pdb.7z successfully created"
   IF EXIST "%PCKG_NAME%.pdb.7z" MOVE /Y "%PCKG_NAME%.pdb.7z" ".." >NUL
@@ -392,19 +403,23 @@ IF NOT EXIST "%PCKG_NAME%" MD "%PCKG_NAME%"
 
 IF /I "%NAME%" == "MPC-HC" (
   IF NOT DEFINED MPCHC_LITE (
-    IF NOT EXIST "%PCKG_NAME%\Lang" MD "%PCKG_NAME%\Lang"
+    IF NOT EXIST "%PCKG_NAME%\Lang"            MD "%PCKG_NAME%\Lang"
+    IF NOT EXIST "%PCKG_NAME%\%LAVFILTERSDIR%" MD "%PCKG_NAME%\%LAVFILTERSDIR%"
   )
   IF /I "%ARCH%" == "x64" (
     COPY /Y /V "%~1_%ARCH%\mpc-hc64.exe" "%PCKG_NAME%\mpc-hc64.exe" >NUL
   ) ELSE (
     COPY /Y /V "%~1_%ARCH%\mpc-hc.exe"   "%PCKG_NAME%\mpc-hc.exe" >NUL
   )
-  COPY /Y /V "%~1_%ARCH%\mpciconlib.dll"             "%PCKG_NAME%\*.dll" >NUL
+  COPY /Y /V "%~1_%ARCH%\mpciconlib.dll"               "%PCKG_NAME%\*.dll" >NUL
   IF NOT DEFINED MPCHC_LITE (
-    COPY /Y /V "%~1_%ARCH%\Lang\mpcresources.??.dll" "%PCKG_NAME%\Lang\mpcresources.??.dll" >NUL
+    COPY /Y /V "%~1_%ARCH%\Lang\mpcresources.??.dll"   "%PCKG_NAME%\Lang\mpcresources.??.dll" >NUL
+    COPY /Y /V "%~1_%ARCH%\%LAVFILTERSDIR%\*.ax"       "%PCKG_NAME%\%LAVFILTERSDIR%" >NUL
+    COPY /Y /V "%~1_%ARCH%\%LAVFILTERSDIR%\*.dll"      "%PCKG_NAME%\%LAVFILTERSDIR%" >NUL
+    COPY /Y /V "%~1_%ARCH%\%LAVFILTERSDIR%\*.manifest" "%PCKG_NAME%\%LAVFILTERSDIR%" >NUL
   )
-  COPY /Y /V "%~1_%ARCH%\D3DCompiler_43.dll"         "%PCKG_NAME%\D3DCompiler_43.dll" >NUL
-  COPY /Y /V "%~1_%ARCH%\d3dx9_43.dll"               "%PCKG_NAME%\d3dx9_43.dll" >NUL
+  COPY /Y /V "%~1_%ARCH%\D3DCompiler_43.dll"           "%PCKG_NAME%\D3DCompiler_43.dll" >NUL
+  COPY /Y /V "%~1_%ARCH%\d3dx9_43.dll"                 "%PCKG_NAME%\d3dx9_43.dll" >NUL
 ) ELSE (
   COPY /Y /V "%~1_%ARCH%\*.ax"           "%PCKG_NAME%\*.ax" >NUL
   COPY /Y /V "%~1_%ARCH%\VSFilter.dll"   "%PCKG_NAME%\VSFilter.dll" >NUL
@@ -430,7 +445,7 @@ EXIT /B
 :SubGetVersion
 REM Get the version
 IF NOT EXIST "include\version_rev.h" SET "FORCE_VER_UPDATE=True"
-IF DEFINED FORCE_VER_UPDATE CALL "update_version.bat" && SET "FORCE_VER_UPDATE="
+IF /I "%FORCE_VER_UPDATE%" == "True" CALL "update_version.bat" && SET "FORCE_VER_UPDATE=False"
 
 FOR /F "tokens=2,3" %%A IN ('FINDSTR /R /C:"define MPC_VERSION_[M,P]" "include\version.h"') DO (
   SET "%%A=%%B"
@@ -510,7 +525,7 @@ EXIT /B
 TITLE %~nx0 Help
 ECHO.
 ECHO Usage:
-ECHO %~nx0 [Clean^|Build^|Rebuild] [x86^|x64^|Both] [Main^|Resources^|MPCHC^|IconLib^|Translations^|Filters^|All] [Debug^|Release] [Lite] [Packages^|Installer^|7z] [FFmpeg] [VS2010^|VS2012] [Analyze]
+ECHO %~nx0 [Clean^|Build^|Rebuild] [x86^|x64^|Both] [Main^|Resources^|MPCHC^|IconLib^|Translations^|Filters^|All] [Debug^|Release] [Lite] [Packages^|Installer^|7z] [LAVFilters] [VS2010^|VS2012] [Analyze]
 ECHO.
 ECHO Notes: You can also prefix the commands with "-", "--" or "/".
 ECHO        Debug only applies to mpc-hc.sln.
@@ -520,14 +535,14 @@ ECHO Executing %~nx0 without any arguments will use the default ones:
 ECHO "%~nx0 Build Both MPCHC Release VS2010"
 ECHO. & ECHO.
 ECHO Examples:
-ECHO %~nx0 x86 Resources -Builds the x86 resources
-ECHO %~nx0 Resources     -Builds both x86 and x64 resources
-ECHO %~nx0 x86           -Builds x86 Main exe and the x86 resources
-ECHO %~nx0 x86 Debug     -Builds x86 Main Debug exe and x86 resources
-ECHO %~nx0 x86 Filters   -Builds x86 Filters
-ECHO %~nx0 x86 All       -Builds x86 Main exe, x86 Filters and the x86 resources
-ECHO %~nx0 x86 Packages  -Builds x86 Main exe, x86 resources and creates the installer and the .7z package
-ECHO %~nx0 x64 FFmpeg 7z -Rebuilds FFmpeg, builds x64 Main exe, x64 resources and creates the .7z package
+ECHO %~nx0 x86 Resources     -Builds the x86 resources
+ECHO %~nx0 Resources         -Builds both x86 and x64 resources
+ECHO %~nx0 x86               -Builds x86 Main exe and the x86 resources
+ECHO %~nx0 x86 Debug         -Builds x86 Main Debug exe and x86 resources
+ECHO %~nx0 x86 Filters       -Builds x86 Filters
+ECHO %~nx0 x86 All           -Builds x86 Main exe, x86 Filters and the x86 resources
+ECHO %~nx0 x86 Packages      -Builds x86 Main exe, x86 resources and creates the installer and the .7z package
+ECHO %~nx0 x64 LAVFilters 7z -Rebuilds LAVFilters, builds x64 Main exe, x64 resources and creates the .7z package
 ECHO.
 ENDLOCAL
 EXIT /B

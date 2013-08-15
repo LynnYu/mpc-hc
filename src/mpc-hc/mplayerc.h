@@ -45,6 +45,7 @@
 enum {
     WM_GRAPHNOTIFY = WM_RESET_DEVICE + 1,
     WM_RESUMEFROMSTATE,
+    WM_SAVESETTINGS,
     WM_TUNER_SCAN_PROGRESS,
     WM_TUNER_SCAN_END,
     WM_TUNER_STATS,
@@ -205,3 +206,4 @@ public:
 
 #define AfxGetAppSettings() static_cast<CMPlayerCApp*>(AfxGetApp())->m_s
 #define AfxGetMyApp()       static_cast<CMPlayerCApp*>(AfxGetApp())
+#define AfxGetMainFrame()   static_cast<CMainFrame*>(AfxGetMainWnd())

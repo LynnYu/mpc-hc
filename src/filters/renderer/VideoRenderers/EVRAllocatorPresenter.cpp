@@ -24,7 +24,7 @@
 #include <Mferror.h>
 #include "IPinHook.h"
 #include "MacrovisionKicker.h"
-#include "../../transform/MPCVideoDec/MPCVideoDecFilter.h"
+#include "IMPCVideoDecFilter.h"
 
 #if (0)     // Set to 1 to activate EVR traces
 #define TRACE_EVR   TRACE
@@ -743,12 +743,16 @@ HRESULT CEVRAllocatorPresenter::CreateProposedOutputType(IMFMediaType* pMixerTyp
         }
     }
 
-    m_AspectRatio.cx = VideoFormat->videoInfo.PixelAspectRatio.Numerator;
-    m_AspectRatio.cy = VideoFormat->videoInfo.PixelAspectRatio.Denominator;
+    CSize videoSize;
+    videoSize.cx = VideoFormat->videoInfo.dwWidth;
+    videoSize.cy = VideoFormat->videoInfo.dwHeight;
+    CSize aspectRatio;
+    aspectRatio.cx = VideoFormat->videoInfo.PixelAspectRatio.Numerator;
+    aspectRatio.cy = VideoFormat->videoInfo.PixelAspectRatio.Denominator;
 
     if (SUCCEEDED(hr)) {
-        i64Size.HighPart = VideoFormat->videoInfo.dwWidth;
-        i64Size.LowPart  = VideoFormat->videoInfo.dwHeight;
+        i64Size.HighPart = videoSize.cx;
+        i64Size.LowPart  = videoSize.cy;
         m_pMediaType->SetUINT64(MF_MT_FRAME_SIZE, i64Size.QuadPart);
 
         m_pMediaType->SetUINT32(MF_MT_PAN_SCAN_ENABLED, 0);
@@ -776,35 +780,31 @@ HRESULT CEVRAllocatorPresenter::CreateProposedOutputType(IMFMediaType* pMixerTyp
 
         m_LastSetOutputRange = r.m_AdvRendSets.iEVROutputRange;
 
-        i64Size.HighPart = m_AspectRatio.cx;
-        i64Size.LowPart  = m_AspectRatio.cy;
+        i64Size.HighPart = aspectRatio.cx;
+        i64Size.LowPart  = aspectRatio.cy;
         m_pMediaType->SetUINT64(MF_MT_PIXEL_ASPECT_RATIO, i64Size.QuadPart);
 
-        MFVideoArea Area = MakeArea(0, 0, VideoFormat->videoInfo.dwWidth, VideoFormat->videoInfo.dwHeight);
+        MFVideoArea Area = MakeArea(0, 0, videoSize.cx, videoSize.cy);
         m_pMediaType->SetBlob(MF_MT_GEOMETRIC_APERTURE, (UINT8*)&Area, sizeof(MFVideoArea));
 
     }
 
-    m_AspectRatio.cx *= VideoFormat->videoInfo.dwWidth;
-    m_AspectRatio.cy *= VideoFormat->videoInfo.dwHeight;
+    aspectRatio.cx *= videoSize.cx;
+    aspectRatio.cy *= videoSize.cy;
 
-    bool bDoneSomething = true;
+    int gcd = GCD(aspectRatio.cx, aspectRatio.cy);
+    if (gcd > 1) {
+        aspectRatio.cx /= gcd;
+        aspectRatio.cy /= gcd;
+    }
 
-    if (m_AspectRatio.cx >= 1 && m_AspectRatio.cy >= 1) { //if any of these is 0, it will stuck into a infinite loop
-        while (bDoneSomething) {
-            bDoneSomething = false;
-            int MinNum = min(m_AspectRatio.cx, m_AspectRatio.cy);
-            int i;
-            for (i = 2; i < MinNum + 1; ++i) {
-                if (m_AspectRatio.cx % i == 0 && m_AspectRatio.cy % i == 0) {
-                    break;
-                }
-            }
-            if (i != MinNum + 1) {
-                m_AspectRatio.cx = m_AspectRatio.cx / i;
-                m_AspectRatio.cy = m_AspectRatio.cy / i;
-                bDoneSomething = true;
-            }
+    if (videoSize != m_NativeVideoSize || aspectRatio != m_AspectRatio) {
+        m_NativeVideoSize = videoSize;
+        m_AspectRatio = aspectRatio;
+
+        // Notify the graph about the change
+        if (m_pSink) {
+            m_pSink->Notify(EC_VIDEO_SIZE_CHANGED, MAKELPARAM(m_NativeVideoSize.cx, m_NativeVideoSize.cy), 0);
         }
     }
 

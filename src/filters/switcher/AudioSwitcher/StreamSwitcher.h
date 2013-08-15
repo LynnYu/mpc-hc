@@ -126,6 +126,8 @@ class CStreamSwitcherInputPin : public CBaseInputPin, public IPinConnection, pub
 
     HANDLE m_hNotifyEvent;
 
+    CComPtr<IAMStreamSelect> m_pSSF;
+
 public:
     CStreamSwitcherInputPin(CStreamSwitcherFilter* pFilter, HRESULT* phr, LPCWSTR pName);
 
@@ -140,6 +142,8 @@ public:
     void Block(bool fBlock);
 
     CCritSec m_csReceive;
+
+    CComPtr<IAMStreamSelect> GetStreamSelectionFilter() { return m_pSSF; }
 
     // pure virtual
     HRESULT CheckMediaType(const CMediaType* pmt);
@@ -248,7 +252,7 @@ public:
     // override these
     virtual HRESULT CheckMediaType(const CMediaType* pmt) = 0;
     virtual HRESULT Transform(IMediaSample* pIn, IMediaSample* pOut);
-    virtual CMediaType CreateNewOutputMediaType(const CMediaType& mt, long& cbBuffer);
+    virtual CMediaType CreateNewOutputMediaType(CMediaType mt, long& cbBuffer);
     virtual void OnNewOutputMediaType(const CMediaType& mtIn, const CMediaType& mtOut) {}
 
     // and maybe these

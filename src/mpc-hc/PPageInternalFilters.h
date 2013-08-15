@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2012 see Authors.txt
+ * (C) 2006-2013 see Authors.txt
  *
  * This file is part of MPC-HC.
  *
@@ -30,15 +30,27 @@ struct filter_t {
     int type;
     int flag;
     UINT nHintID;
-    CUnknown* (WINAPI* CreateInstance)(LPUNKNOWN lpunk, HRESULT* phr);
+    void (*ShowPropertyPages)(CWnd* pParendWnd);
+
+    filter_t() {};
+
+    filter_t(LPCTSTR label, int type, int flag, UINT nHintID, void (*ShowPropertyPages)(CWnd* pParendWnd))
+        : label(label)
+        , type(type)
+        , flag(flag)
+        , nHintID(nHintID)
+        , ShowPropertyPages(ShowPropertyPages)
+    {}
 };
 
 class CPPageInternalFiltersListBox : public CCheckListBox
 {
     DECLARE_DYNAMIC(CPPageInternalFiltersListBox)
 
+    const CArray<filter_t>& m_filters;
+
 public:
-    CPPageInternalFiltersListBox(int n);
+    CPPageInternalFiltersListBox(int n, const CArray<filter_t>& filters);
 
 protected:
     virtual void PreSubclassWindow();
@@ -65,16 +77,21 @@ class CPPageInternalFilters : public CPPageBase
 {
     DECLARE_DYNAMIC(CPPageInternalFilters)
 
+    CPPageInternalFiltersListBox m_listSrc;
+    CPPageInternalFiltersListBox m_listTra;
+
+    CArray<filter_t> m_filters;
+
+    void InitFiltersList();
+
+    void ShowPPage(CPPageInternalFiltersListBox& l);
+
 public:
     CPPageInternalFilters();
     virtual ~CPPageInternalFilters();
 
     // Dialog Data
     enum { IDD = IDD_PPAGEINTERNALFILTERS };
-    CPPageInternalFiltersListBox m_listSrc;
-    CPPageInternalFiltersListBox m_listTra;
-
-    void ShowPPage(CPPageInternalFiltersListBox& l);
 
 protected:
     virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
@@ -83,7 +100,6 @@ protected:
 
     DECLARE_MESSAGE_MAP()
 
-public:
     afx_msg void OnLbnDblclkList1();
     afx_msg void OnLbnDblclkList2();
     afx_msg void OnSelChange();

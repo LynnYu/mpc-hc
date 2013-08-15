@@ -28,6 +28,7 @@
 #include "SysVersion.h"
 #include "WinAPIUtils.h"
 #include "UpdateChecker.h"
+#include "moreuuids.h"
 
 
 CAppSettings::CAppSettings()
@@ -123,17 +124,26 @@ CAppSettings::CAppSettings()
 #if INTERNAL_SOURCEFILTER_FLIC
     SrcFiltersKeys[SRC_FLIC] = _T("SRC_FLIC");
 #endif
-#if INTERNAL_SOURCEFILTER_DVSOURCE
-    SrcFiltersKeys[SRC_D2V] = _T("SRC_D2V");
-#endif
 #if INTERNAL_SOURCEFILTER_DTSAC3
     SrcFiltersKeys[SRC_DTSAC3] = _T("SRC_DTSAC3");
 #endif
 #if INTERNAL_SOURCEFILTER_MATROSKA
     SrcFiltersKeys[SRC_MATROSKA] = _T("SRC_MATROSKA");
 #endif
-#if INTERNAL_SOURCEFILTER_SHOUTCAST
-    SrcFiltersKeys[SRC_SHOUTCAST] = _T("SRC_SHOUTCAST");
+#if INTERNAL_SOURCEFILTER_HTTP
+    SrcFiltersKeys[SRC_HTTP] = _T("SRC_HTTP");
+#endif
+#if INTERNAL_SOURCEFILTER_RTSP
+    SrcFiltersKeys[SRC_RTSP] = _T("SRC_RTSP");
+#endif
+#if INTERNAL_SOURCEFILTER_RTSP
+    SrcFiltersKeys[SRC_UDP] = _T("SRC_UDP");
+#endif
+#if INTERNAL_SOURCEFILTER_RTP
+    SrcFiltersKeys[SRC_RTP] = _T("SRC_RTP");
+#endif
+#if INTERNAL_SOURCEFILTER_MMS
+    SrcFiltersKeys[SRC_MMS] = _T("SRC_MMS");
 #endif
 #if INTERNAL_SOURCEFILTER_REALMEDIA
     SrcFiltersKeys[SRC_REALMEDIA] = _T("SRC_REALMEDIA");
@@ -219,69 +229,56 @@ CAppSettings::CAppSettings()
 #if INTERNAL_DECODER_PCM
     TraFiltersKeys[TRA_PCM] = _T("TRA_PCM");
 #endif
-
-    // Internal DXVA decoders
-#if INTERNAL_DECODER_H264_DXVA
-    DXVAFiltersKeys[TRA_DXVA_H264] = _T("TRA_DXVA_H264");
-#endif
-#if INTERNAL_DECODER_VC1_DXVA
-    DXVAFiltersKeys[TRA_DXVA_VC1] = _T("TRA_DXVA_VC1");
-#endif
-#if INTERNAL_DECODER_WMV3_DXVA
-    DXVAFiltersKeys[TRA_DXVA_WMV3] = _T("TRA_DXVA_WMV3");
-#endif
-#if INTERNAL_DECODER_MPEG2_DXVA
-    DXVAFiltersKeys[TRA_DXVA_MPEG2] = _T("TRA_DXVA_MPEG2");
-#endif
-
-    // Internal FFmpeg decoders
 #if INTERNAL_DECODER_H264
-    FFMFiltersKeys[FFM_H264] = _T("FFM_H264");
+    TraFiltersKeys[TRA_H264] = _T("TRA_H264");
 #endif
 #if INTERNAL_DECODER_VC1
-    FFMFiltersKeys[FFM_VC1] = _T("FFM_VC1");
+    TraFiltersKeys[TRA_VC1] = _T("TRA_VC1");
 #endif
 #if INTERNAL_DECODER_FLV
-    FFMFiltersKeys[FFM_FLV4] = _T("FFM_FLV4");
+    TraFiltersKeys[TRA_FLV4] = _T("TRA_FLV4");
 #endif
 #if INTERNAL_DECODER_VP356
-    FFMFiltersKeys[FFM_VP356] = _T("FFM_VP356");
+    TraFiltersKeys[TRA_VP356] = _T("TRA_VP356");
 #endif
 #if INTERNAL_DECODER_VP8
-    FFMFiltersKeys[FFM_VP8] = _T("FFM_VP8");
+    TraFiltersKeys[TRA_VP8] = _T("TRA_VP8");
 #endif
 #if INTERNAL_DECODER_XVID
-    FFMFiltersKeys[FFM_XVID] = _T("FFM_XVID");
+    TraFiltersKeys[TRA_XVID] = _T("TRA_XVID");
 #endif
 #if INTERNAL_DECODER_DIVX
-    FFMFiltersKeys[FFM_DIVX] = _T("FFM_DIVX");
+    TraFiltersKeys[TRA_DIVX] = _T("TRA_DIVX");
 #endif
 #if INTERNAL_DECODER_MSMPEG4
-    FFMFiltersKeys[FFM_MSMPEG4] = _T("FFM_MSMPEG4");
+    TraFiltersKeys[TRA_MSMPEG4] = _T("TRA_MSMPEG4");
 #endif
 #if INTERNAL_DECODER_WMV
-    FFMFiltersKeys[FFM_WMV] = _T("FFM_WMV");
+    TraFiltersKeys[TRA_WMV] = _T("TRA_WMV");
 #endif
 #if INTERNAL_DECODER_SVQ
-    FFMFiltersKeys[FFM_SVQ3] = _T("FFM_SVQ3");
+    TraFiltersKeys[TRA_SVQ3] = _T("TRA_SVQ3");
 #endif
 #if INTERNAL_DECODER_H263
-    FFMFiltersKeys[FFM_H263] = _T("FFM_H263");
+    TraFiltersKeys[TRA_H263] = _T("TRA_H263");
 #endif
 #if INTERNAL_DECODER_THEORA
-    FFMFiltersKeys[FFM_THEORA] = _T("FFM_THEORA");
+    TraFiltersKeys[TRA_THEORA] = _T("TRA_THEORA");
 #endif
 #if INTERNAL_DECODER_AMVV
-    FFMFiltersKeys[FFM_AMVV] = _T("FFM_AMVV");
+    TraFiltersKeys[TRA_AMVV] = _T("TRA_AMVV");
 #endif
 #if INTERNAL_DECODER_MJPEG
-    FFMFiltersKeys[FFM_MJPEG] = _T("FFM_MJPEG");
+    TraFiltersKeys[TRA_MJPEG] = _T("TRA_MJPEG");
 #endif
 #if INTERNAL_DECODER_INDEO
-    FFMFiltersKeys[FFM_INDEO] = _T("FFM_INDEO");
+    TraFiltersKeys[TRA_INDEO] = _T("TRA_INDEO");
 #endif
 #if INTERNAL_DECODER_SCREEN
-    FFMFiltersKeys[FFM_SCREEN] = _T("FFM_SCREEN");
+    TraFiltersKeys[TRA_SCREEN] = _T("TRA_SCREEN");
+#endif
+#if INTERNAL_DECODER_FLIC
+    TraFiltersKeys[TRA_FLIC] = _T("TRA_FLIC");
 #endif
 }
 
@@ -293,6 +290,7 @@ void CAppSettings::CreateCommands()
     ADDCMD((ID_FILE_OPENDVDBD,                  'D', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_OPEN_DVD));
     ADDCMD((ID_FILE_OPENDEVICE,                 'V', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_OPEN_DEVICE));
     ADDCMD((ID_FILE_REOPEN,                     'E', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_REOPEN));
+    ADDCMD((ID_FILE_RECYCLE,                      0, FVIRTKEY | FNOINVERT,                    IDS_FILE_RECYCLE));
 
     ADDCMD((ID_FILE_SAVE_COPY,                    0, FVIRTKEY | FNOINVERT,                    IDS_AG_SAVE_AS));
     ADDCMD((ID_FILE_SAVE_IMAGE,                 'I', FVIRTKEY | FALT | FNOINVERT,             IDS_AG_SAVE_IMAGE));
@@ -340,6 +338,7 @@ void CAppSettings::CreateCommands()
     ADDCMD((ID_VIEW_PLAYLIST,                   '7', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_TOGGLE_PLAYLIST));
     ADDCMD((ID_VIEW_CAPTURE,                    '8', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_TOGGLE_CAPTURE));
     ADDCMD((ID_VIEW_SHADEREDITOR,               '9', FVIRTKEY | FCONTROL | FNOINVERT,         IDS_AG_TOGGLE_SHADER));
+    ADDCMD((ID_VIEW_NAVIGATION,                   0, FVIRTKEY | FNOINVERT,                    IDS_AG_TOGGLE_NAVIGATION));
     ADDCMD((ID_VIEW_PRESETS_MINIMAL,            '1', FVIRTKEY | FNOINVERT,                    IDS_AG_VIEW_MINIMAL));
     ADDCMD((ID_VIEW_PRESETS_COMPACT,            '2', FVIRTKEY | FNOINVERT,                    IDS_AG_VIEW_COMPACT));
     ADDCMD((ID_VIEW_PRESETS_NORMAL,             '3', FVIRTKEY | FNOINVERT,                    IDS_AG_VIEW_NORMAL));
@@ -487,6 +486,20 @@ bool CAppSettings::IsD3DFullscreen() const
             iDSVideoRendererType == VIDRNDT_DS_EVR_CUSTOM ||
             iDSVideoRendererType == VIDRNDT_DS_SYNC) {
         return fD3DFullscreen || (nCLSwitches & CLSW_D3DFULLSCREEN);
+    } else {
+        return false;
+    }
+}
+
+bool CAppSettings::IsISREnabled() const
+{
+    if (iDSVideoRendererType == VIDRNDT_DS_VMR7RENDERLESS ||
+            iDSVideoRendererType == VIDRNDT_DS_VMR9RENDERLESS ||
+            iDSVideoRendererType == VIDRNDT_DS_EVR_CUSTOM ||
+            iDSVideoRendererType == VIDRNDT_DS_DXR ||
+            iDSVideoRendererType == VIDRNDT_DS_SYNC ||
+            iDSVideoRendererType == VIDRNDT_DS_MADVR) {
+        return fAutoloadSubtitles;
     } else {
         return false;
     }
@@ -748,12 +761,6 @@ void CAppSettings::SaveSettings()
     }
     for (int f = 0; f < TRA_LAST; f++) {
         pApp->WriteProfileInt(IDS_R_INTERNAL_FILTERS, TraFiltersKeys[f], TraFilters[f]);
-    }
-    for (int f = 0; f < TRA_DXVA_LAST; f++) {
-        pApp->WriteProfileInt(IDS_R_INTERNAL_FILTERS, DXVAFiltersKeys[f], DXVAFilters[f]);
-    }
-    for (int f = 0; f < FFM_LAST; f++) {
-        pApp->WriteProfileInt(IDS_R_INTERNAL_FILTERS, FFMFiltersKeys[f], FFmpegFilters[f]);
     }
 
     pApp->WriteProfileString(IDS_R_SETTINGS, IDS_RS_LOGOFILE, strLogoFileName);
@@ -1302,18 +1309,6 @@ void CAppSettings::LoadSettings()
     for (int f = 0; f < TRA_LAST; f++) {
         TraFilters[f] = !!pApp->GetProfileInt(IDS_R_INTERNAL_FILTERS, TraFiltersKeys[f], TRUE);
     }
-    for (int f = 0; f < TRA_DXVA_LAST; f++) {
-        DXVAFilters[f] = !!pApp->GetProfileInt(IDS_R_INTERNAL_FILTERS, DXVAFiltersKeys[f], TRUE);
-    }
-    for (int f = 0; f < FFM_LAST; f++) {
-        FFmpegFilters[f] = !!pApp->GetProfileInt(IDS_R_INTERNAL_FILTERS, FFMFiltersKeys[f], TRUE);
-    }
-    if (!TRA_DXVA_LAST) {
-        DXVAFilters[0] = FALSE;
-    }
-    if (!FFM_LAST) {
-        FFmpegFilters[0] = FALSE;
-    }
 
     strLogoFileName = pApp->GetProfileString(IDS_R_SETTINGS, IDS_RS_LOGOFILE, _T(""));
     nLogoId = pApp->GetProfileInt(IDS_R_SETTINGS, IDS_RS_LOGOID, DEF_LOGO);
@@ -1778,6 +1773,8 @@ void CAppSettings::ParseCommandLine(CAtlList<CString>& cmdln)
                 ExtractDVDStartPos(cmdln.GetNext(pos));
             } else if (sw == _T("cd")) {
                 nCLSwitches |= CLSW_CD;
+            } else if (sw == _T("device")) {
+                nCLSwitches |= CLSW_DEVICE;
             } else if (sw == _T("add")) {
                 nCLSwitches |= CLSW_ADD;
             } else if (sw == _T("regvid")) {
@@ -1855,7 +1852,11 @@ void CAppSettings::ParseCommandLine(CAtlList<CString>& cmdln)
                 nCLSwitches |= CLSW_HELP | CLSW_UNRECOGNIZEDSWITCH;
             }
         } else {
-            slFiles.AddTail(ParseFileName(param));
+            if (param == _T("-")) { // Special case: standard input
+                slFiles.AddTail(_T("pipe:0"));
+            } else {
+                slFiles.AddTail(ParseFileName(param));
+            }
         }
     }
 }
@@ -1995,7 +1996,7 @@ void CAppSettings::CRecentFileAndURLList::Add(LPCTSTR lpszPathName)
 
 bool CAppSettings::IsVSFilterInstalled()
 {
-    return IsCLSIDRegistered(_T("{9852A670-F845-491B-9BE6-EBD841B8A613}"));
+    return IsCLSIDRegistered(CLSID_VSFilter);
 }
 
 bool CAppSettings::HasEVR()

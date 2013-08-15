@@ -22,7 +22,7 @@
 #include "AboutDlg.h"
 #include "mpc-hc_config.h"
 #ifndef MPCHC_LITE
-#include "InternalFiltersConfig.h" // needed for HAS_FFMPEG
+#include "FGFilterLAV.h"
 #endif
 #include "mplayerc.h"
 #include "version.h"
@@ -32,16 +32,12 @@
 /////////////////////////////////////////////////////////////////////////////
 // CAboutDlg dialog used for App About
 
-#if HAS_FFMPEG && !defined(MPCHC_LITE)
-extern "C" char* GetFFmpegCompiler();
-#endif
-
 CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
     , m_appname(_T(""))
     , m_strBuildNumber(_T(""))
     , m_MPCCompiler(_T(""))
 #ifndef MPCHC_LITE
-    , m_FFmpegCompiler(_T(""))
+    , m_LAVFiltersVersion(_T(""))
 #endif
 {
     //{{AFX_DATA_INIT(CAboutDlg)
@@ -53,6 +49,9 @@ BOOL CAboutDlg::OnInitDialog()
     // Get the default text before it is overwritten by the call to __super::OnInitDialog()
     GetDlgItem(IDC_STATIC1)->GetWindowText(m_appname);
     GetDlgItem(IDC_AUTHORS_LINK)->GetWindowText(m_credits);
+#ifndef MPCHC_LITE
+    GetDlgItem(IDC_LAVFILTERS_VERSION)->GetWindowText(m_LAVFiltersVersion);
+#endif
 
     __super::OnInitDialog();
 
@@ -103,12 +102,14 @@ BOOL CAboutDlg::OnInitDialog()
 #endif
 #elif defined(_MSC_VER)
 #if (_MSC_VER == 1700) // 2012
-#if (_MSC_FULL_VER == 170060315)
-    m_MPCCompiler = _T("MSVC 2012 Update 2");
+#if (_MSC_FULL_VER == 170060610)
+    m_MPCCompiler = _T("MSVC 2012 Update 3");
+#elif (_MSC_FULL_VER == 170060315)  // MSVC 2012 Update 2
+#error VS2012 Update 2 is not supported because the binaries will not run on XP. Install Update 3 instead.
 #elif (_MSC_FULL_VER == 170051106)
     m_MPCCompiler = _T("MSVC 2012 Update 1");
-#elif (_MSC_FULL_VER < 170050727)
-    m_MPCCompiler = _T("MSVC 2012 Beta/RC/PR");
+#elif (_MSC_FULL_VER < 170050727)   // MSVC 2012
+#error Please install the latest Update for VS2012.
 #else
     m_MPCCompiler = _T("MSVC 2012");
 #endif
@@ -143,8 +144,11 @@ BOOL CAboutDlg::OnInitDialog()
     m_MPCCompiler += _T(" Debug");
 #endif
 
-#if HAS_FFMPEG && !defined(MPCHC_LITE)
-    m_FFmpegCompiler = CA2CT(GetFFmpegCompiler());
+#ifndef MPCHC_LITE
+    CString LAVFiltersVersion = CFGFilterLAV::GetVersion();
+    if (!LAVFiltersVersion.IsEmpty()) {
+        m_LAVFiltersVersion = LAVFiltersVersion;
+    }
 #endif
 
     m_buildDate = _T(__DATE__) _T(" ") _T(__TIME__);
@@ -181,7 +185,7 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Text(pDX, IDC_VERSION, m_strBuildNumber);
     DDX_Text(pDX, IDC_MPC_COMPILER, m_MPCCompiler);
 #ifndef MPCHC_LITE
-    DDX_Text(pDX, IDC_FFMPEG_COMPILER, m_FFmpegCompiler);
+    DDX_Text(pDX, IDC_LAVFILTERS_VERSION, m_LAVFiltersVersion);
 #endif
     DDX_Text(pDX, IDC_STATIC2, m_buildDate);
     DDX_Text(pDX, IDC_STATIC3, m_OSName);
@@ -216,10 +220,13 @@ void CAboutDlg::OnCopyToClipboard()
     info += _T("Build information:\n");
     info += _T("    Version:            ") + m_strBuildNumber + _T("\n");
     info += _T("    MPC-HC compiler:    ") + m_MPCCompiler + _T("\n");
-#ifndef MPCHC_LITE
-    info += _T("    FFmpeg compiler:    ") + m_FFmpegCompiler + _T("\n");
-#endif
     info += _T("    Build date:         ") + m_buildDate + _T("\n\n");
+#ifndef MPCHC_LITE
+    info += _T("LAV Filters:\n");
+    info += _T("    LAV Splitter:       ") + CFGFilterLAV::GetVersion(CFGFilterLAV::SPLITTER) + _T("\n");
+    info += _T("    LAV Video:          ") + CFGFilterLAV::GetVersion(CFGFilterLAV::VIDEO_DECODER) + _T("\n");
+    info += _T("    LAV Audio:          ") + CFGFilterLAV::GetVersion(CFGFilterLAV::AUDIO_DECODER) + _T("\n\n");
+#endif
     info += _T("Operating system:\n");
     info += _T("    Name:               ") + m_OSName + _T("\n");
     info += _T("    Version:            ") + m_OSVersion + _T("\n");
